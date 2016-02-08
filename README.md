@@ -12,16 +12,28 @@ connections from multiple clients simultaneously.
 Prerequisites
 -------------
 To build OpenELP you will need:
+
+Windows
 * [CMake](https://cmake.org/)
 * [GCC](https://gcc.gnu.org/) or [Visual Studio](aka.ms/vs2015)
 * [PCRE2](http://www.pcre.org/) or [SVN](https://subversion.apache.org/)
+* (optional) [NSIS](http://nsis.sourceforge.net/) - only if you want to create a Windows installer package
+
+Linux
+* [CMake](https://cmake.org/)
+* [GCC](https://gcc.gnu.org/) or [Visual Studio](aka.ms/vs2015)
+* [PCRE2](http://www.pcre.org/) or [SVN](https://subversion.apache.org/)
+* Pkg-Config
+* Doxygen
+
+On Ubuntu, you can retrieve all of these at once by running:
+```
+sudo apt-get install cmake libpcre3-dev pkgconf doxygen
+```
 
 If your system doesn't have PCRE2 development files installed, you have the
 option of bundling PCRE2 with OpenELP. To do this, you must have SVN installed,
 and specify `-DOPENELP_BUNDLE_PCRE:BOOL=ON` when you call `cmake`.
-
-To create a Windows installer, you will also need to install
-[NSIS](http://nsis.sourceforge.net/)
 
 The only runtime dependency that OpenELP has is on the PCRE2 shared library,
 unless PCRE2 was bundled into OpenELP.
