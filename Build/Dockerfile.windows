@@ -1,0 +1,10 @@
+# See https://github.com/PatrickLang/Docker-Experiments/tree/master/VSCpp
+FROM vscpp
+
+# Install CMake
+RUN powershell.exe invoke-webrequest https://cmake.org/files/v3.4/cmake-3.4.3-win32-x86.exe -Outfile c:\cmake.exe
+RUN C:\cmake.exe /S
+RUN DEL C:\cmake.exe
+
+RUN setx /M PATH "%PATH%;C:\Program Files (x86)\CMake\bin"
+
