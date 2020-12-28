@@ -44,8 +44,8 @@
  * @brief Internal API for random number generation
  */
 
-#ifndef _rand_h
-#define _rand_h
+#ifndef RAND_H_
+#define RAND_H_
 
 #include <stdint.h>
 
@@ -68,6 +68,6 @@ int rand_init(void);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int rand_get(uint32_t *rand_val);
+int rand_get(uint32_t * rand_val);
 
-#endif /* _rand_h */
+#endif /* RAND_H_ */

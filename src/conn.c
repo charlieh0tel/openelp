@@ -44,11 +44,15 @@
  * @brief Network connection implementation
  */
 
-#include "conn.h"
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #ifdef _WIN32
-#  include "conn_wsa_errno.h"
+#  include <io.h>
+#else
+#  include <unistd.h>
 #endif
-#include "mutex.h"
 
 #ifdef _WIN32
 #  include <winsock2.h>
@@ -66,15 +70,11 @@
 #  endif
 #endif
 
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "conn.h"
 #ifdef _WIN32
-#  include <io.h>
-#else
-#  include <unistd.h>
+#  include "conn_wsa_errno.h"
 #endif
+#include "mutex.h"
 
 #ifndef MSG_NOSIGNAL
 /// Requests not to send SIGPIPE on errors
@@ -107,46 +107,41 @@ typedef int SOCKET;
 /*!
  * @brief Private data for an instance of a network connection
  */
-struct conn_priv
-{
+struct conn_priv {
 	/// Actual socket file descriptor
-	SOCKET sock_fd;
+	SOCKET			sock_fd;
 
 	/// Socket connection file descriptor
-	SOCKET conn_fd;
+	SOCKET			conn_fd;
 
 	/// One of conn_priv::sock_fd or conn_priv::conn_fd, used for TX/RX
-	SOCKET fd;
+	SOCKET			fd;
+
+	/// Length of conn_priv::remote_addr_len
+	socklen_t		remote_addr_len;
 
 	/// Storage for the remote address of the connection
 	struct sockaddr_storage remote_addr;
 
-	/// Length of conn_priv::remote_addr_len
-	socklen_t remote_addr_len;
-
 	/// Mutex for protecting the socket file descriptors
-	struct mutex_handle mutex;
+	struct mutex_handle	mutex;
 
 #ifdef _WIN32
 	/// Information about the Windows Sockets implementation
-	WSADATA wsadat;
+	WSADATA			wsadat;
 #endif
 };
 
-int conn_init(struct conn_handle *conn)
+int conn_init(struct conn_handle * conn)
 {
-	struct conn_priv *priv;
+	struct conn_priv * priv;
 	int ret;
 
 	if (conn->priv == NULL)
-	{
 		conn->priv = malloc(sizeof(struct conn_priv));
-	}
 
 	if (conn->priv == NULL)
-	{
 		return -ENOMEM;
-	}
 
 	memset(conn->priv, 0x0, sizeof(struct conn_priv));
 
@@ -154,8 +149,7 @@ int conn_init(struct conn_handle *conn)
 
 #ifdef _WIN32
 	ret = WSAStartup(MAKEWORD(2, 2), &priv->wsadat);
-	if (ret != 0)
-	{
+	if (ret != 0) {
 		ret = -ret;
 		goto conn_init_exit_pre;
 	}
@@ -163,9 +157,7 @@ int conn_init(struct conn_handle *conn)
 
 	ret = mutex_init(&priv->mutex);
 	if (ret < 0)
-	{
 		goto conn_init_exit;
-	}
 
 	priv->sock_fd = INVALID_SOCKET;
 	priv->conn_fd = INVALID_SOCKET;
@@ -178,17 +170,16 @@ conn_init_exit:
 	WSACleanup();
 conn_init_exit_pre:
 #endif
-	free (conn->priv);
+	free(conn->priv);
 	conn->priv = NULL;
 
 	return ret;
 }
 
-void conn_free(struct conn_handle *conn)
+void conn_free(struct conn_handle * conn)
 {
-	if (conn->priv != NULL)
-	{
-		struct conn_priv *priv = (struct conn_priv *)conn->priv;
+	if (conn->priv != NULL) {
+		struct conn_priv * priv = (struct conn_priv *)conn->priv;
 
 		conn_close(conn);
 
@@ -204,18 +195,17 @@ void conn_free(struct conn_handle *conn)
 	}
 }
 
-int conn_listen(struct conn_handle *conn)
+int conn_listen(struct conn_handle * conn)
 {
 	struct addrinfo hints;
-	struct addrinfo *res = NULL;
-	struct conn_priv *priv = (struct conn_priv *)conn->priv;
+	struct addrinfo * res = NULL;
+	struct conn_priv * priv = (struct conn_priv *)conn->priv;
 	int ret;
-	const int yes = 1;
+	static const int yes = 1;
 
 	memset(&hints, 0x0, sizeof(struct addrinfo));
 
-	switch(conn->type)
-	{
+	switch (conn->type) {
 	case CONN_TYPE_TCP:
 		hints.ai_socktype = SOCK_STREAM;
 		break;
@@ -229,31 +219,31 @@ int conn_listen(struct conn_handle *conn)
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_flags = AI_PASSIVE;
 
-	ret = getaddrinfo(conn->source_addr, conn->source_port == NULL ? "0" : conn->source_port, &hints, &res);
+	ret = getaddrinfo(conn->source_addr,
+			  conn->source_port == NULL ? "0" : conn->source_port,
+			  &hints, &res);
 	if (ret != 0)
-	{
 		return -EADDRNOTAVAIL;
-	}
 
-	priv->sock_fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-	if (priv->sock_fd == INVALID_SOCKET)
-	{
+	priv->sock_fd = socket(res->ai_family, res->ai_socktype,
+			       res->ai_protocol);
+	if (priv->sock_fd == INVALID_SOCKET) {
 		ret = SOCK_ERRNO;
 		goto conn_listen_free;
 	}
 
-	ret = setsockopt(priv->sock_fd, SOL_SOCKET, SO_REUSEADDR, (void *)&yes, sizeof(int));
-	if (ret == SOCKET_ERROR)
-	{
+	ret = setsockopt(priv->sock_fd, SOL_SOCKET, SO_REUSEADDR,
+			 (const void *)&yes, sizeof(int));
+	if (ret == SOCKET_ERROR) {
 		/// @TODO Close priv->sock_fd
 		ret = SOCK_ERRNO;
 		goto conn_listen_free;
 	}
 
 #ifdef __APPLE__
-	ret = setsockopt(priv->sock_fd, SOL_SOCKET, SO_NOSIGPIPE, (void *)&yes, sizeof(int));
-	if (ret == SOCKET_ERROR)
-	{
+	ret = setsockopt(priv->sock_fd, SOL_SOCKET, SO_NOSIGPIPE,
+			 (const void *)&yes, sizeof(int));
+	if (ret == SOCKET_ERROR) {
 		/// @TODO Close priv->sock_fd
 		ret = SOCK_ERRNO;
 		goto conn_listen_free;
@@ -261,18 +251,15 @@ int conn_listen(struct conn_handle *conn)
 #endif
 
 	ret = bind(priv->sock_fd, res->ai_addr, (socklen_t)res->ai_addrlen);
-	if (ret == SOCKET_ERROR)
-	{
+	if (ret == SOCKET_ERROR) {
 		/// @TODO Close priv->sock_fd
 		ret = SOCK_ERRNO;
 		goto conn_listen_free;
 	}
 
-	if (conn->type == CONN_TYPE_TCP)
-	{
+	if (conn->type == CONN_TYPE_TCP) {
 		ret = listen(priv->sock_fd, 0);
-		if (ret == SOCKET_ERROR)
-		{
+		if (ret == SOCKET_ERROR) {
 			/// @TODO Close priv->sock_fd
 			ret = SOCK_ERRNO;
 			goto conn_listen_free;
@@ -291,68 +278,68 @@ conn_listen_free:
 	return ret;
 }
 
-int conn_accept(struct conn_handle *conn, struct conn_handle *accepted)
+int conn_accept(struct conn_handle * conn, struct conn_handle * accepted)
 {
-	struct conn_priv *priv = (struct conn_priv *)conn->priv;
-	struct conn_priv *apriv = (struct conn_priv *)accepted->priv;
+	struct conn_priv * priv = (struct conn_priv *)conn->priv;
+	struct conn_priv * apriv = (struct conn_priv *)accepted->priv;
+
 #ifdef _WIN32
 	uint32_t bytes_returned;
 	struct tcp_keepalive keepalive =
 	{
-		.onoff = 1,
-		.keepalivetime = 600 * 1000,
-		.keepaliveinterval = 12 * 1000,
+		.onoff			= 1,
+		.keepalivetime		= 600 * 1000,
+		.keepaliveinterval	= 12 * 1000,
 	};
 #else
-	const int yes = 1;
-	const int ten_min = 600;
-	const int twelve_sec = 12;
-	const int ten = 10;
+	static const int yes = 1;
+	static const int ten_min = 600;
+	static const int twelve_sec = 12;
+	static const int ten = 10;
 #endif
 
 	apriv->remote_addr_len = sizeof(struct sockaddr_storage);
 
 	mutex_lock_shared(&priv->mutex);
 
-	apriv->conn_fd = accept(priv->sock_fd, (struct sockaddr *)&apriv->remote_addr, &apriv->remote_addr_len);
+	apriv->conn_fd = accept(priv->sock_fd,
+				(struct sockaddr *)&apriv->remote_addr,
+				&apriv->remote_addr_len);
 
 	mutex_unlock_shared(&priv->mutex);
 
 	if (apriv->conn_fd == INVALID_SOCKET)
-	{
 		return SOCK_ERRNO;
-	}
 
 #ifdef _WIN32
-	if (WSAIoctl(apriv->conn_fd, SIO_KEEPALIVE_VALS, &keepalive, sizeof(struct tcp_keepalive), NULL, 0, &bytes_returned, NULL, NULL) != 0)
-	{
+	if (WSAIoctl(apriv->conn_fd, SIO_KEEPALIVE_VALS, &keepalive,
+		     sizeof(struct tcp_keepalive), NULL, 0, &bytes_returned,
+		     NULL, NULL) !=
+	    0)
 		/// @TODO Close apriv->conn_fd
 		return SOCK_ERRNO;
-	}
+
 #else
-	if (setsockopt(apriv->conn_fd, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(int)) == SOCKET_ERROR)
-	{
+	if (setsockopt(apriv->conn_fd, SOL_SOCKET, SO_KEEPALIVE, &yes,
+		       sizeof(int)) == SOCKET_ERROR)
 		/// @TODO Close apriv->conn_fd
 		return SOCK_ERRNO;
-	}
 
-	if (setsockopt(apriv->conn_fd, SOL_TCP, TCP_KEEPIDLE, &ten_min, sizeof(int)) == SOCKET_ERROR)
-	{
+	if (setsockopt(apriv->conn_fd, SOL_TCP, TCP_KEEPIDLE, &ten_min,
+		       sizeof(int)) == SOCKET_ERROR)
 		/// @TODO Close apriv->conn_fd
 		return SOCK_ERRNO;
-	}
 
-	if (setsockopt(apriv->conn_fd, SOL_TCP, TCP_KEEPINTVL, &twelve_sec, sizeof(int)) == SOCKET_ERROR)
-	{
+	if (setsockopt(apriv->conn_fd, SOL_TCP, TCP_KEEPINTVL, &twelve_sec,
+		       sizeof(int)) == SOCKET_ERROR)
 		/// @TODO Close apriv->conn_fd
 		return SOCK_ERRNO;
-	}
 
-	if (setsockopt(apriv->conn_fd, SOL_TCP, TCP_KEEPCNT, &ten, sizeof(int)) == SOCKET_ERROR)
-	{
+	if (setsockopt(apriv->conn_fd, SOL_TCP, TCP_KEEPCNT, &ten,
+		       sizeof(int)) == SOCKET_ERROR)
 		/// @TODO Close apriv->conn_fd
 		return SOCK_ERRNO;
-	}
+
 #endif
 
 	mutex_lock(&apriv->mutex);
@@ -364,19 +351,18 @@ int conn_accept(struct conn_handle *conn, struct conn_handle *accepted)
 	return 0;
 }
 
-int conn_connect(struct conn_handle *conn, const char *addr, const char *port)
+int conn_connect(struct conn_handle * conn, const char * addr,
+		 const char * port)
 {
-	struct conn_priv *priv = (struct conn_priv *)conn->priv;
+	struct conn_priv * priv = (struct conn_priv *)conn->priv;
 	struct addrinfo hints;
-	struct addrinfo *res = NULL;
-	struct addrinfo *res_remote = NULL;
-	const int yes = 1;
+	struct addrinfo * res = NULL;
+	struct addrinfo * res_remote = NULL;
+	static const int yes = 1;
 	int ret;
 
 	if (conn->type != CONN_TYPE_TCP)
-	{
 		return -EPROTOTYPE;
-	}
 
 	memset(&hints, 0x0, sizeof(struct addrinfo));
 
@@ -384,9 +370,9 @@ int conn_connect(struct conn_handle *conn, const char *addr, const char *port)
 	hints.ai_flags = AI_PASSIVE;
 	hints.ai_socktype = SOCK_STREAM;
 
-	ret = getaddrinfo(conn->source_addr, conn->source_port == NULL ? "0" : conn->source_port, &hints, &res);
-	if (ret != 0)
-	{
+	ret = getaddrinfo(conn->source_addr, conn->source_port == NULL ? "0" :
+			  conn->source_port, &hints, &res);
+	if (ret != 0) {
 		ret = -EADDRNOTAVAIL;
 		goto conn_connect_free_early;
 	}
@@ -397,45 +383,43 @@ int conn_connect(struct conn_handle *conn, const char *addr, const char *port)
 	hints.ai_socktype = SOCK_STREAM;
 
 	ret = getaddrinfo(addr, port, &hints, &res_remote);
-	if (ret != 0)
-	{
+	if (ret != 0) {
 		ret = -EADDRNOTAVAIL;
 		goto conn_connect_free_early;
 	}
 
-	priv->sock_fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-	if (priv->sock_fd == INVALID_SOCKET)
-	{
+	priv->sock_fd = socket(res->ai_family, res->ai_socktype,
+			       res->ai_protocol);
+	if (priv->sock_fd == INVALID_SOCKET) {
 		ret = SOCK_ERRNO;
 		goto conn_connect_free_early;
 	}
 
-	ret = setsockopt(priv->sock_fd, SOL_SOCKET, SO_REUSEADDR, (void *)&yes, sizeof(int));
-	if (ret == SOCKET_ERROR)
-	{
+	ret = setsockopt(priv->sock_fd, SOL_SOCKET, SO_REUSEADDR,
+			 (const void *)&yes, sizeof(int));
+	if (ret == SOCKET_ERROR) {
 		ret = SOCK_ERRNO;
 		goto conn_connect_free_early;
 	}
 
 #ifdef __APPLE__
-	ret = setsockopt(priv->sock_fd, SOL_SOCKET, SO_NOSIGPIPE, (void *)&yes, sizeof(int));
-	if (ret == SOCKET_ERROR)
-	{
+	ret = setsockopt(priv->sock_fd, SOL_SOCKET, SO_NOSIGPIPE,
+			 (const void *)&yes, sizeof(int));
+	if (ret == SOCKET_ERROR) {
 		ret = SOCK_ERRNO;
 		goto conn_connect_free_early;
 	}
 #endif
 
 	ret = bind(priv->sock_fd, res->ai_addr, (socklen_t)res->ai_addrlen);
-	if (ret == SOCKET_ERROR)
-	{
+	if (ret == SOCKET_ERROR) {
 		ret = SOCK_ERRNO;
 		goto conn_connect_free;
 	}
 
-	ret = connect(priv->sock_fd, res_remote->ai_addr, (socklen_t)res_remote->ai_addrlen);
-	if (ret == SOCKET_ERROR)
-	{
+	ret = connect(priv->sock_fd, res_remote->ai_addr,
+		      (socklen_t)res_remote->ai_addrlen);
+	if (ret == SOCKET_ERROR) {
 		ret = SOCK_ERRNO;
 		goto conn_connect_free;
 	}
@@ -460,57 +444,46 @@ conn_connect_free:
 
 conn_connect_free_early:
 	if (res_remote != NULL)
-	{
 		freeaddrinfo(res_remote);
-	}
 
 	if (res != NULL)
-	{
 		freeaddrinfo(res);
-	}
 
 	return ret;
 }
 
-int conn_recv(struct conn_handle *conn, uint8_t *buff, size_t buff_len)
+int conn_recv(struct conn_handle * conn, uint8_t * buff, size_t buff_len)
 {
-	struct conn_priv *priv = (struct conn_priv *)conn->priv;
+	struct conn_priv * priv = (struct conn_priv *)conn->priv;
 	int ret = 0;
 	int bytes_read = 0;
 
 	if (conn->type != CONN_TYPE_TCP)
-	{
 		return -EPROTOTYPE;
-	}
 
 	mutex_lock_shared(&priv->mutex);
 
-	if (priv->fd == INVALID_SOCKET)
-	{
+	if (priv->fd == INVALID_SOCKET) {
 		ret = -ENOTCONN;
 
 		goto conn_recv_exit;
 	}
 
-	while (buff_len > 0)
-	{
-		ret = recvfrom(priv->fd, (char *)buff, (socklen_t)buff_len, 0, NULL, NULL);
+	while (buff_len > 0) {
+		ret = recvfrom(priv->fd, (char *)buff, (socklen_t)buff_len, 0,
+			       NULL, NULL);
 
-		if (ret == 0)
-		{
+		if (ret == 0) {
 			ret = -EPIPE;
 
 			goto conn_recv_exit;
-		}
-		else if (ret == SOCKET_ERROR)
-		{
+		} else if (ret == SOCKET_ERROR) {
 			ret = SOCK_ERRNO;
 
 #ifdef _WIN32
 			if (ret == -WSAESHUTDOWN)
-			{
 				ret = -EPIPE;
-			}
+
 #endif
 
 			goto conn_recv_exit;
@@ -527,37 +500,35 @@ conn_recv_exit:
 	return ret;
 }
 
-int conn_recv_any(struct conn_handle *conn, uint8_t *buff, size_t buff_len, uint32_t *addr, uint16_t *port)
+int conn_recv_any(struct conn_handle * conn, uint8_t * buff, size_t buff_len,
+		  uint32_t * addr, uint16_t * port)
 {
-	struct conn_priv *priv = (struct conn_priv *)conn->priv;
+	struct conn_priv * priv = (struct conn_priv *)conn->priv;
 	int ret;
 
 	priv->remote_addr_len = sizeof(struct sockaddr_storage);
 
 	mutex_lock_shared(&priv->mutex);
 
-	if (priv->fd == INVALID_SOCKET)
-	{
+	if (priv->fd == INVALID_SOCKET) {
 		ret = -ENOTCONN;
 
 		goto conn_recv_any_exit;
 	}
 
-	ret = recvfrom(priv->fd, (char *)buff, (socklen_t)buff_len, 0, (struct sockaddr *)&priv->remote_addr, &priv->remote_addr_len);
+	ret = recvfrom(priv->fd, (char *)buff, (socklen_t)buff_len, 0,
+		       (struct sockaddr *)&priv->remote_addr,
+		       &priv->remote_addr_len);
 
-	if (ret == 0)
-	{
+	if (ret == 0) {
 		ret = -EPIPE;
-	}
-	else if (ret == SOCKET_ERROR)
-	{
+	} else if (ret == SOCKET_ERROR) {
 		ret = SOCK_ERRNO;
 
 #ifdef _WIN32
 		if (ret == -WSAESHUTDOWN)
-		{
 			ret = -EPIPE;
-		}
+
 #endif
 	}
 
@@ -565,51 +536,41 @@ conn_recv_any_exit:
 	mutex_unlock_shared(&priv->mutex);
 
 	if (addr != NULL && ret > 0)
-	{
 		*addr = ((struct sockaddr_in *)&priv->remote_addr)->sin_addr.s_addr;
-	}
 
 	if (port != NULL && ret > 0)
-	{
 		*port = htons(((struct sockaddr_in *)&priv->remote_addr)->sin_port);
-	}
 
 	return ret;
 }
 
-int conn_send(struct conn_handle *conn, const uint8_t *buff, size_t buff_len)
+int conn_send(struct conn_handle * conn, const uint8_t * buff, size_t buff_len)
 {
-	struct conn_priv *priv = (struct conn_priv *)conn->priv;
+	struct conn_priv * priv = (struct conn_priv *)conn->priv;
 	int ret;
 
 	if (conn->type != CONN_TYPE_TCP)
-	{
 		return -EPROTOTYPE;
-	}
 
 	mutex_lock_shared(&priv->mutex);
 
-	if (priv->fd != INVALID_SOCKET)
-	{
-		while (buff_len > 0)
-		{
-			ret = send(priv->fd, (char *)buff, (socklen_t)buff_len, MSG_NOSIGNAL);
+	if (priv->fd != INVALID_SOCKET) {
+		while (buff_len > 0) {
+			// TODO: Bug? buff isn't changed
+			ret = send(priv->fd, (const char *)buff, (socklen_t)buff_len,
+				   MSG_NOSIGNAL);
 
-			if (ret == 0)
-			{
+			if (ret == 0) {
 				ret = -EPIPE;
 
 				goto conn_send_exit;
-			}
-			else if (ret == SOCKET_ERROR)
-			{
+			} else if (ret == SOCKET_ERROR) {
 				ret = SOCK_ERRNO;
 
 #ifdef _WIN32
 				if (ret == -WSAESHUTDOWN)
-				{
 					ret = -EPIPE;
-				}
+
 #endif
 
 				goto conn_send_exit;
@@ -619,9 +580,7 @@ int conn_send(struct conn_handle *conn, const uint8_t *buff, size_t buff_len)
 		}
 
 		ret = 0;
-	}
-	else
-	{
+	} else {
 		ret = -ENOTCONN;
 	}
 
@@ -631,16 +590,15 @@ conn_send_exit:
 	return ret;
 }
 
-int conn_send_to(struct conn_handle *conn, const uint8_t *buff, size_t buff_len, uint32_t addr, uint16_t port)
+int conn_send_to(struct conn_handle * conn, const uint8_t * buff,
+		 size_t buff_len, uint32_t addr, uint16_t port)
 {
-	struct conn_priv *priv = (struct conn_priv *)conn->priv;
+	struct conn_priv * priv = (struct conn_priv *)conn->priv;
 	struct sockaddr_in saddr;
 	int ret;
 
 	if (conn->type != CONN_TYPE_UDP)
-	{
 		return -EPROTOTYPE;
-	}
 
 	memset(&saddr, 0x0, sizeof(struct sockaddr_in));
 
@@ -650,27 +608,25 @@ int conn_send_to(struct conn_handle *conn, const uint8_t *buff, size_t buff_len,
 
 	mutex_lock_shared(&priv->mutex);
 
-	if (priv->fd != INVALID_SOCKET)
-	{
-		while (buff_len > 0)
-		{
-			ret = sendto(priv->fd, (char *)buff, (socklen_t)buff_len, MSG_NOSIGNAL, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in));
+	if (priv->fd != INVALID_SOCKET) {
+		while (buff_len > 0) {
+			// TODO: Bug? buff isn't changed
+			ret = sendto(priv->fd, (const char *)buff,
+				     (socklen_t)buff_len, MSG_NOSIGNAL,
+				     (struct sockaddr *)&saddr,
+				     sizeof(struct sockaddr_in));
 
-			if (ret == 0)
-			{
+			if (ret == 0) {
 				ret = -EPIPE;
 
 				goto conn_send_to_exit;
-			}
-			else if (ret == SOCKET_ERROR)
-			{
+			} else if (ret == SOCKET_ERROR) {
 				ret = SOCK_ERRNO;
 
 #ifdef _WIN32
 				if (ret == -WSAESHUTDOWN)
-				{
 					ret = -EPIPE;
-				}
+
 #endif
 				goto conn_send_to_exit;
 			}
@@ -679,9 +635,7 @@ int conn_send_to(struct conn_handle *conn, const uint8_t *buff, size_t buff_len,
 		}
 
 		ret = 0;
-	}
-	else
-	{
+	} else {
 		ret = -ENOTCONN;
 	}
 
@@ -691,15 +645,14 @@ conn_send_to_exit:
 	return ret;
 }
 
-void conn_drop(struct conn_handle *conn)
+void conn_drop(struct conn_handle * conn)
 {
-	struct conn_priv *priv = (struct conn_priv *)conn->priv;
+	struct conn_priv * priv = (struct conn_priv *)conn->priv;
 
 	// First, shutdown any active connections
 	mutex_lock_shared(&priv->mutex);
 
-	if (priv->conn_fd == INVALID_SOCKET && priv->fd == INVALID_SOCKET)
-	{
+	if (priv->conn_fd == INVALID_SOCKET && priv->fd == INVALID_SOCKET) {
 		// Nothing to do here
 		mutex_unlock_shared(&priv->mutex);
 
@@ -707,9 +660,7 @@ void conn_drop(struct conn_handle *conn)
 	}
 
 	if (priv->conn_fd != INVALID_SOCKET)
-	{
 		shutdown(priv->conn_fd, SHUT_RDWR);
-	}
 
 	mutex_unlock_shared(&priv->mutex);
 
@@ -720,8 +671,7 @@ void conn_drop(struct conn_handle *conn)
 
 	priv->fd = INVALID_SOCKET;
 
-	if (priv->conn_fd != INVALID_SOCKET)
-	{
+	if (priv->conn_fd != INVALID_SOCKET) {
 		closesocket(priv->conn_fd);
 		priv->conn_fd = INVALID_SOCKET;
 	}
@@ -729,9 +679,9 @@ void conn_drop(struct conn_handle *conn)
 	mutex_unlock(&priv->mutex);
 }
 
-void conn_close(struct conn_handle *conn)
+void conn_close(struct conn_handle * conn)
 {
-	struct conn_priv *priv = (struct conn_priv *)conn->priv;
+	struct conn_priv * priv = (struct conn_priv *)conn->priv;
 
 	// First, shutdown any active connections
 	conn_shutdown(conn);
@@ -743,14 +693,12 @@ void conn_close(struct conn_handle *conn)
 
 	priv->fd = INVALID_SOCKET;
 
-	if (priv->conn_fd != INVALID_SOCKET)
-	{
+	if (priv->conn_fd != INVALID_SOCKET) {
 		closesocket(priv->conn_fd);
 		priv->conn_fd = INVALID_SOCKET;
 	}
 
-	if (priv->sock_fd != INVALID_SOCKET)
-	{
+	if (priv->sock_fd != INVALID_SOCKET) {
 		closesocket(priv->sock_fd);
 		priv->sock_fd = INVALID_SOCKET;
 	}
@@ -758,19 +706,16 @@ void conn_close(struct conn_handle *conn)
 	mutex_unlock(&priv->mutex);
 }
 
-void conn_shutdown(struct conn_handle *conn)
+void conn_shutdown(struct conn_handle * conn)
 {
-	struct conn_priv *priv = (struct conn_priv *)conn->priv;
+	struct conn_priv * priv = (struct conn_priv *)conn->priv;
 
 	mutex_lock_shared(&priv->mutex);
 
 	if (priv->conn_fd != INVALID_SOCKET)
-	{
 		shutdown(priv->conn_fd, SHUT_RDWR);
-	}
 
-	if (priv->sock_fd != INVALID_SOCKET)
-	{
+	if (priv->sock_fd != INVALID_SOCKET) {
 		shutdown(priv->sock_fd, SHUT_RDWR);
 #ifdef _WIN32
 		/// @TODO WIN32 Hack to cancel an in-progress accept
@@ -782,14 +727,13 @@ void conn_shutdown(struct conn_handle *conn)
 	mutex_unlock_shared(&priv->mutex);
 }
 
-void conn_get_remote_addr(const struct conn_handle *conn, char dest[46])
+void conn_get_remote_addr(const struct conn_handle * conn, char dest[46])
 {
-	const struct conn_priv *priv = (const struct conn_priv *)conn->priv;
-	const struct sockaddr_in *addr = (const struct sockaddr_in *)&priv->remote_addr;
-	const struct sockaddr_in6 *addr6 = (const struct sockaddr_in6 *)&priv->remote_addr;
+	const struct conn_priv * priv = (const struct conn_priv *)conn->priv;
+	const struct sockaddr_in * addr = (const struct sockaddr_in *)&priv->remote_addr;
+	const struct sockaddr_in6 * addr6 = (const struct sockaddr_in6 *)&priv->remote_addr;
 
-	switch (priv->remote_addr.ss_family)
-	{
+	switch (priv->remote_addr.ss_family) {
 	case AF_INET:
 		inet_ntop(addr->sin_family, &addr->sin_addr.s_addr, dest, 46);
 		break;
@@ -802,17 +746,15 @@ void conn_get_remote_addr(const struct conn_handle *conn, char dest[46])
 	}
 }
 
-int conn_in_use(struct conn_handle *conn)
+int conn_in_use(struct conn_handle * conn)
 {
-	struct conn_priv *priv = (struct conn_priv *)conn->priv;
+	struct conn_priv * priv = (struct conn_priv *)conn->priv;
 	int ret = 0;
 
 	mutex_lock_shared(&priv->mutex);
 
 	if (priv->fd != INVALID_SOCKET)
-	{
 		ret = 1;
-	}
 
 	mutex_unlock_shared(&priv->mutex);
 

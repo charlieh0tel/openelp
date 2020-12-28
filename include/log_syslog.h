@@ -44,6 +44,9 @@
  * @brief Defenitions and prototypes for interfacing with Syslog
  */
 
+#ifndef LOG_SYSLOG_H_
+#define LOG_SYSLOG_H_
+
 #ifdef HAVE_SYSLOG
 #  include <syslog.h>
 #elif !defined(_log_syslog_h)
@@ -59,4 +62,6 @@
 #  define closelog()
 #  define openlog(ident, option, facility) return -ENOTSUP;
 #  define vsyslog(facility_priority, format, arglist)
-#endif /* _log_syslog_h */
+#endif
+
+#endif /* LOG_SYSLOG_H_ */

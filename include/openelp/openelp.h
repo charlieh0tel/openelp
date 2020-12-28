@@ -49,8 +49,8 @@
  * proxy.
  */
 
-#ifndef _openelp_h
-#define _openelp_h
+#ifndef OPENELP_H_
+#define OPENELP_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,11 +64,11 @@ extern "C" {
 
 #ifdef _WIN32
 #  ifndef OPENELP_API
-	 /// Public API decorator
+/// Public API decorator
 #    define OPENELP_API __declspec(dllimport)
 #  endif
 #else
-   /// Public API decorator
+/// Public API decorator
 #  define OPENELP_API
 #endif
 
@@ -78,8 +78,7 @@ extern "C" {
 /*!
  * @brief Severity level of log information
  */
-enum LOG_LEVEL
-{
+enum LOG_LEVEL {
 	/// A fatal event, which will result in program termination
 	LOG_LEVEL_FATAL = 0,
 
@@ -99,8 +98,7 @@ enum LOG_LEVEL
 /*!
  * @brief Logging facilities to write logging events to
  */
-enum LOG_MEDIUM
-{
+enum LOG_MEDIUM {
 	/// Discard all log messages
 	LOG_MEDIUM_NONE = 0,
 
@@ -124,40 +122,39 @@ enum LOG_MEDIUM
  * value is absent or empty in the configuration file, it is NULL in this
  * struct.
  */
-struct proxy_conf
-{
+struct proxy_conf {
 	/// Address to bind to for listening for client connections
-	char *bind_addr;
+	char *		bind_addr;
 
 	/// Address to bind to for sending and receiving the client's data
-	char *bind_addr_ext;
+	char *		bind_addr_ext;
 
 	/// Additional addresses to bind to for additional clients' data
-	char **bind_addr_ext_add;
-
-	/// Number of additional addresses specified by bind_addr_ext_add
-	uint16_t bind_addr_ext_add_len;
+	char **		bind_addr_ext_add;
 
 	/// Regular expression for matching allowed callsigns
-	char *calls_allowed;
+	char *		calls_allowed;
 
 	/// Regular expression for matching denied callsigns
-	char *calls_denied;
+	char *		calls_denied;
 
 	/// Required password for access
-	char *password;
-
-	/// Port on which to listen for client connections
-	uint16_t port;
+	char *		password;
 
 	/// Name to use when registering in the official list
-	char *reg_name;
+	char *		reg_name;
 
 	/// Optional comment showen in the official proxy list
-	char *reg_comment;
+	char *		reg_comment;
 
 	/// Registered address override
-	char *public_addr;
+	char *		public_addr;
+
+	/// Number of additional addresses specified by bind_addr_ext_add
+	uint16_t	bind_addr_ext_add_len;
+
+	/// Port on which to listen for client connections
+	uint16_t	port;
 };
 
 /*!
@@ -167,13 +164,12 @@ struct proxy_conf
  * should be initialized using the ::proxy_init function, and subsequently
  * freed by ::proxy_free when the proxy is no longer needed.
  */
-struct proxy_handle
-{
-	/// Configuration for the proxy
-	struct proxy_conf conf;
-
+struct proxy_handle {
 	/// Private data - used internally by proxy functions
-	void *priv;
+	void *			priv;
+
+	/// Configuration for the proxy
+	struct proxy_conf	conf;
 };
 
 /*!
@@ -183,7 +179,7 @@ struct proxy_handle
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int OPENELP_API get_nonce(uint32_t *nonce);
+int OPENELP_API get_nonce(uint32_t * nonce);
 
 /*!
  * @brief Gets the expected response for a given nonce and password
@@ -194,7 +190,8 @@ int OPENELP_API get_nonce(uint32_t *nonce);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int OPENELP_API get_password_response(const uint32_t nonce, const char *password, uint8_t response[PROXY_PASS_RES_LEN]);
+int OPENELP_API get_password_response(uint32_t nonce, const char * password,
+				      uint8_t response[PROXY_PASS_RES_LEN]);
 
 /*!
  * @brief Authorizes the given callsign against the proxy's configuration
@@ -204,35 +201,36 @@ int OPENELP_API get_password_response(const uint32_t nonce, const char *password
  *
  * @returns 1 if call is authorized, 0 if not, negative ERRNO value on failure
  */
-int OPENELP_API proxy_authorize_callsign(struct proxy_handle *ph, const char *callsign);
+int OPENELP_API proxy_authorize_callsign(struct proxy_handle * ph,
+					 const char * callsign);
 
 /*!
  * @brief Closes the proxy so no more clients can connect
  *
  * @param[in,out] ph Target proxy instance
  */
-void OPENELP_API proxy_close(struct proxy_handle *ph);
+void OPENELP_API proxy_close(struct proxy_handle * ph);
 
 /*!
  * @brief Drops all currently connected clients from the proxy
  *
  * @param[in,out] ph Target proxy instance
  */
-void OPENELP_API proxy_drop(struct proxy_handle *ph);
+void OPENELP_API proxy_drop(struct proxy_handle * ph);
 
 /*!
  * @brief Frees data allocated by ::proxy_init
  *
  * @param[in,out] ph Target proxy instance
  */
-void OPENELP_API proxy_free(struct proxy_handle *ph);
+void OPENELP_API proxy_free(struct proxy_handle * ph);
 
 /*!
  * @brief Instructs the proxy to identify itself to the current log medium
  *
  * @param[in] ph Target proxy instance
  */
-void OPENELP_API proxy_ident(struct proxy_handle *ph);
+void OPENELP_API proxy_ident(struct proxy_handle * ph);
 
 /*!
  * @brief Initializes the private data in a ::proxy_handle
@@ -241,7 +239,7 @@ void OPENELP_API proxy_ident(struct proxy_handle *ph);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int OPENELP_API proxy_init(struct proxy_handle *ph);
+int OPENELP_API proxy_init(struct proxy_handle * ph);
 
 /*!
  * @brief Loads the configuration from the file at the given path
@@ -251,7 +249,7 @@ int OPENELP_API proxy_init(struct proxy_handle *ph);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int OPENELP_API proxy_load_conf(struct proxy_handle *ph, const char *path);
+int OPENELP_API proxy_load_conf(struct proxy_handle * ph, const char * path);
 
 /*!
  * @brief Logs the given message to the current medium if lvl is high enough
@@ -261,7 +259,8 @@ int OPENELP_API proxy_load_conf(struct proxy_handle *ph, const char *path);
  * @param[in] fmt String format of message
  * @param[in] ... Arguments for format specification
  */
-void OPENELP_API proxy_log(struct proxy_handle *ph, enum LOG_LEVEL lvl, const char *fmt, ...);
+void OPENELP_API proxy_log(struct proxy_handle * ph, enum LOG_LEVEL lvl,
+			   const char * fmt, ...);
 
 /*!
  * @brief Changes the log message importance threshold
@@ -269,7 +268,7 @@ void OPENELP_API proxy_log(struct proxy_handle *ph, enum LOG_LEVEL lvl, const ch
  * @param[in,out] ph Target proxy instance
  * @param[in] lvl New message importance threshold
  */
-void OPENELP_API proxy_log_level(struct proxy_handle *ph, const enum LOG_LEVEL lvl);
+void OPENELP_API proxy_log_level(struct proxy_handle * ph, enum LOG_LEVEL lvl);
 
 /*!
  * @brief Changes the target logging medium
@@ -280,7 +279,9 @@ void OPENELP_API proxy_log_level(struct proxy_handle *ph, const enum LOG_LEVEL l
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int OPENELP_API proxy_log_select_medium(struct proxy_handle *ph, const enum LOG_MEDIUM medium, const char *target);
+int OPENELP_API proxy_log_select_medium(struct proxy_handle * ph,
+					enum LOG_MEDIUM medium,
+					const char * target);
 
 /*!
  * @brief Opens the proxy for client connections
@@ -289,7 +290,7 @@ int OPENELP_API proxy_log_select_medium(struct proxy_handle *ph, const enum LOG_
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int OPENELP_API proxy_open(struct proxy_handle *ph);
+int OPENELP_API proxy_open(struct proxy_handle * ph);
 
 /*!
  * @brief Blocking call to process new clients
@@ -298,14 +299,14 @@ int OPENELP_API proxy_open(struct proxy_handle *ph);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int OPENELP_API proxy_process(struct proxy_handle *ph);
+int OPENELP_API proxy_process(struct proxy_handle * ph);
 
 /*!
  * @brief Gracefully shut down all proxy operations asynchronously
  *
  * @param[in,out] ph Target proxy instance
  */
-void OPENELP_API proxy_shutdown(struct proxy_handle *ph);
+void OPENELP_API proxy_shutdown(struct proxy_handle * ph);
 
 /*!
  * @brief Starts the client processing thread(s)
@@ -314,17 +315,17 @@ void OPENELP_API proxy_shutdown(struct proxy_handle *ph);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int OPENELP_API proxy_start(struct proxy_handle *ph);
+int OPENELP_API proxy_start(struct proxy_handle * ph);
 
 /*!
  * @brief Updates the registration status of the proxy instance
  *
  * @param[in] ph Target proxy instance
  */
-void OPENELP_API proxy_update_registration(struct proxy_handle *ph);
+void OPENELP_API proxy_update_registration(struct proxy_handle * ph);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _openelp_h */
+#endif /* OPENELP_H_ */

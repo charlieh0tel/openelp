@@ -44,10 +44,10 @@
  * @brief Implmentation of the random number generator
  */
 
-#include "rand.h"
-
 #include <stdlib.h>
 #include <time.h>
+
+#include "rand.h"
 
 int rand_init(void)
 {
@@ -56,7 +56,7 @@ int rand_init(void)
 	return 0;
 }
 
-int rand_get(uint32_t *rand_val)
+int rand_get(uint32_t * rand_val)
 {
 	*rand_val = rand();
 

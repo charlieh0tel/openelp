@@ -44,8 +44,8 @@
  * @brief Internal API for mutual exclusion objects
  */
 
-#ifndef _mutex_h
-#define _mutex_h
+#ifndef MUTEX_H_
+#define MUTEX_H_
 
 #include <stdint.h>
 
@@ -56,10 +56,9 @@
  * should be initialized using the ::condvar_init function, and subsequently
  * freed by ::condvar_free when the condition variable is no longer needed.
  */
-struct condvar_handle
-{
+struct condvar_handle {
 	/// Private data - used internally by condvar functions
-	void *priv;
+	void * priv;
 };
 
 /*!
@@ -69,10 +68,9 @@ struct condvar_handle
  * should be initialized using the ::mutex_init function, and subsequently
  * freed by ::mutex_free when the mutex is no longer needed.
  */
-struct mutex_handle
-{
+struct mutex_handle {
 	/// Private data - used internally by mutex functions
-	void *priv;
+	void * priv;
 };
 
 /*!
@@ -80,7 +78,7 @@ struct mutex_handle
  *
  * @param[in,out] condvar Target condition variable instance
  */
-void condvar_free(struct condvar_handle *condvar);
+void condvar_free(struct condvar_handle * condvar);
 
 /*!
  * @brief Initializes the private data in a ::condvar_handle
@@ -89,7 +87,7 @@ void condvar_free(struct condvar_handle *condvar);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int condvar_init(struct condvar_handle *condvar);
+int condvar_init(struct condvar_handle * condvar);
 
 /*!
  * @brief Unlocks the given mutex and blocks until awoken by ::condvar_wake_all
@@ -100,7 +98,7 @@ int condvar_init(struct condvar_handle *condvar);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int condvar_wait(struct condvar_handle *condvar, struct mutex_handle *mutex);
+int condvar_wait(struct condvar_handle * condvar, struct mutex_handle * mutex);
 
 /*!
  * @brief Unlocks the given mutex and blocks until awoken by ::condvar_wake_all,
@@ -112,7 +110,8 @@ int condvar_wait(struct condvar_handle *condvar, struct mutex_handle *mutex);
  *
  * @returns 0 on success, 1 on timeout, negative ERRNO value on failure
  */
-int condvar_wait_time(struct condvar_handle *condvar, struct mutex_handle *mutex, uint32_t msec);
+int condvar_wait_time(struct condvar_handle * condvar,
+		      struct mutex_handle * mutex, uint32_t msec);
 
 /*!
  * @brief Awakens all calls to ::condvar_wait currently blocked
@@ -121,7 +120,7 @@ int condvar_wait_time(struct condvar_handle *condvar, struct mutex_handle *mutex
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int condvar_wake_all(struct condvar_handle *condvar);
+int condvar_wake_all(struct condvar_handle * condvar);
 
 /*!
  * @brief Awakens a single blocked call to ::condvar_wait
@@ -130,14 +129,14 @@ int condvar_wake_all(struct condvar_handle *condvar);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int condvar_wake_one(struct condvar_handle *condvar);
+int condvar_wake_one(struct condvar_handle * condvar);
 
 /*!
  * @brief Frees data allocated by ::mutex_init
  *
  * @param[in,out] mutex Target mutex instance
  */
-void mutex_free(struct mutex_handle *mutex);
+void mutex_free(struct mutex_handle * mutex);
 
 /*!
  * @brief Initializes the private data in a ::mutex_handle
@@ -146,7 +145,7 @@ void mutex_free(struct mutex_handle *mutex);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int mutex_init(struct mutex_handle *mutex);
+int mutex_init(struct mutex_handle * mutex);
 
 /*!
  * @brief Acquires the exclusive lock on the given mutex, blocking if it is
@@ -156,7 +155,7 @@ int mutex_init(struct mutex_handle *mutex);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int mutex_lock(struct mutex_handle *mutex);
+int mutex_lock(struct mutex_handle * mutex);
 
 /*!
  * @brief Acquires a shared Lock on the given mutex, blocking if it is already
@@ -166,7 +165,7 @@ int mutex_lock(struct mutex_handle *mutex);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int mutex_lock_shared(struct mutex_handle *mutex);
+int mutex_lock_shared(struct mutex_handle * mutex);
 
 /*!
  * @brief Releases the exclusive lock acquired by ::mutex_lock
@@ -175,7 +174,7 @@ int mutex_lock_shared(struct mutex_handle *mutex);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int mutex_unlock(struct mutex_handle *mutex);
+int mutex_unlock(struct mutex_handle * mutex);
 
 /*!
  * @brief Releases the shared lock acquired by ::mutex_lock_shared
@@ -184,6 +183,6 @@ int mutex_unlock(struct mutex_handle *mutex);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int mutex_unlock_shared(struct mutex_handle *mutex);
+int mutex_unlock_shared(struct mutex_handle * mutex);
 
-#endif /* _mutex_h */
+#endif /* MUTEX_H_ */

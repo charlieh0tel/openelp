@@ -44,8 +44,8 @@
  * @brief Internal API for regular expression matching
  */
 
-#ifndef _regex_h
-#define _regex_h
+#ifndef REGEX_H_
+#define REGEX_H_
 
 /*!
  * @brief Represents an instance of a compiled regular expression
@@ -54,10 +54,9 @@
  * should be initialized using the ::regex_init function, and subsequently
  * freed by ::regex_free when the regular expression is no longer needed.
  */
-struct regex_handle
-{
+struct regex_handle {
 	/// Private data - used internally by regex functions
-	void *priv;
+	void * priv;
 };
 
 /*!
@@ -68,14 +67,14 @@ struct regex_handle
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int regex_compile(struct regex_handle *re, const char *pattern);
+int regex_compile(struct regex_handle * re, const char * pattern);
 
 /*!
  * @brief Frees data allocated by ::regex_init
  *
  * @param[in,out] re Target regular expression instance
  */
-void regex_free(struct regex_handle *re);
+void regex_free(struct regex_handle * re);
 
 /*!
  * @brief Initializes the private data in a ::regex_handle
@@ -84,7 +83,7 @@ void regex_free(struct regex_handle *re);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int regex_init(struct regex_handle *re);
+int regex_init(struct regex_handle * re);
 
 /*!
  * @brief Tests the given subject against the regular expression
@@ -95,6 +94,6 @@ int regex_init(struct regex_handle *re);
  *
  * @returns 1 on match, 0 if no match, negative ERRNO value on failure
  */
-int regex_is_match(struct regex_handle *re, const char *subject);
+int regex_is_match(const struct regex_handle * re, const char * subject);
 
-#endif /* _regex_h */
+#endif /* REGEX_H_ */

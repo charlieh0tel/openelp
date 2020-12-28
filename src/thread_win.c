@@ -44,25 +44,24 @@
  * @brief Threading implementation for Windows
  */
 
-#include "mutex.h"
-#include "thread.h"
-
-#include <windows.h>
-
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <windows.h>
+
+#include "mutex.h"
+#include "thread.h"
+
 /*!
  * @brief Private data for an instance of a Windows thread
  */
-struct thread_priv
-{
-	/// Mutex for protecting the thread handle
-	struct mutex_handle mutex;
-
+struct thread_priv {
 	/// Handle to the thread
-	HANDLE thread;
+	HANDLE			thread;
+
+	/// Mutex for protecting the thread handle
+	struct mutex_handle	mutex;
 };
 
 /*!
@@ -76,24 +75,21 @@ struct thread_priv
  * signature than the the one used by these threading routines, this wrapper
  * function is used to call the worker function specified in the thread
  * handle.
- *
- * @TODO Can this be static?
  */
-DWORD WINAPI windows_thread_wrapper(LPVOID ctx)
+static DWORD WINAPI windows_thread_wrapper(LPVOID ctx)
 {
-	struct thread_handle *pt = (struct thread_handle *)ctx;
+	struct thread_handle * pt = (struct thread_handle *)ctx;
 
 	pt->func_ptr(pt);
 
 	return 0;
 }
 
-void thread_free(struct thread_handle *pt)
+void thread_free(struct thread_handle * pt)
 {
-	struct thread_priv *priv = (struct thread_priv *)pt->priv;
+	struct thread_priv * priv = (struct thread_priv *)pt->priv;
 
-	if (pt->priv != NULL)
-	{
+	if (pt->priv != NULL) {
 		thread_join(pt);
 
 		mutex_free(&priv->mutex);
@@ -103,20 +99,16 @@ void thread_free(struct thread_handle *pt)
 	}
 }
 
-int thread_init(struct thread_handle *pt)
+int thread_init(struct thread_handle * pt)
 {
-	struct thread_priv *priv;
+	struct thread_priv * priv;
 	int ret;
 
 	if (pt->priv == NULL)
-	{
 		pt->priv = malloc(sizeof(struct thread_priv));
-	}
 
 	if (pt->priv == NULL)
-	{
 		return -ENOMEM;
-	}
 
 	memset(pt->priv, 0x0, sizeof(struct thread_priv));
 
@@ -124,9 +116,7 @@ int thread_init(struct thread_handle *pt)
 
 	ret = mutex_init(&priv->mutex);
 	if (ret < 0)
-	{
 		goto thread_init_exit;
-	}
 
 	return 0;
 
@@ -137,9 +127,9 @@ thread_init_exit:
 	return ret;
 }
 
-int thread_join(struct thread_handle *pt)
+int thread_join(struct thread_handle * pt)
 {
-	struct thread_priv *priv = (struct thread_priv *)pt->priv;
+	struct thread_priv * priv = (struct thread_priv *)pt->priv;
 
 	mutex_lock(&priv->mutex);
 
@@ -154,13 +144,14 @@ int thread_join(struct thread_handle *pt)
 	return -ENOSYS;
 }
 
-int thread_start(struct thread_handle *pt)
+int thread_start(struct thread_handle * pt)
 {
-	struct thread_priv *priv = (struct thread_priv *)pt->priv;
+	struct thread_priv * priv = (struct thread_priv *)pt->priv;
 
 	mutex_lock(&priv->mutex);
 
-	priv->thread = CreateThread(NULL, 0, windows_thread_wrapper, pt, 0, NULL);
+	priv->thread = CreateThread(NULL, 0, windows_thread_wrapper, pt, 0,
+				    NULL);
 
 	mutex_unlock(&priv->mutex);
 

@@ -44,8 +44,8 @@
  * @brief Internal API for network connections
  */
 
-#ifndef _conn_h
-#define _conn_h
+#ifndef CONN_H_
+#define CONN_H_
 
 #include <stdint.h>
 
@@ -56,8 +56,7 @@
 /*!
  * @brief Supported connection protocols
  */
-enum CONN_TYPE
-{
+enum CONN_TYPE {
 	/// Transmission Control Protocol
 	CONN_TYPE_TCP,
 
@@ -72,19 +71,18 @@ enum CONN_TYPE
  * should be initialized using the ::conn_init function, and subsequently
  * freed by ::conn_free when the network connection is no longer needed.
  */
-struct conn_handle
-{
+struct conn_handle {
 	/// Private data - used internally by conn functions
-	void *priv;
+	void *		priv;
 
 	/// Local network interface to bind to, or NULL for all
-	const char *source_addr;
+	const char *	source_addr;
 
 	/// Local socket port to bind to, or NULL for any
-	const char *source_port;
+	const char *	source_port;
 
 	/// Protocol to use for this connection
-	enum CONN_TYPE type;
+	enum CONN_TYPE	type;
 };
 
 /*!
@@ -95,14 +93,14 @@ struct conn_handle
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int conn_accept(struct conn_handle *conn, struct conn_handle *accepted);
+int conn_accept(struct conn_handle * conn, struct conn_handle * accepted);
 
 /*!
  * @brief Closes the target connection with the client
  *
  * @param[in,out] conn Target network connection instance
  */
-void conn_close(struct conn_handle *conn);
+void conn_close(struct conn_handle * conn);
 
 /*!
  * @brief Opens a connection to a remote socket
@@ -113,21 +111,22 @@ void conn_close(struct conn_handle *conn);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int conn_connect(struct conn_handle *conn, const char *addr, const char *port);
+int conn_connect(struct conn_handle * conn, const char * addr,
+		 const char * port);
 
 /*!
  * @brief Drops any active connections but doesn't close the connection
  *
  * @param[in,out] conn Target network connection instance
  */
-void conn_drop(struct conn_handle *conn);
+void conn_drop(struct conn_handle * conn);
 
 /*!
  * @brief Frees data allocated by ::conn_init
  *
  * @param[in,out] conn Target network connection instance
  */
-void conn_free(struct conn_handle *conn);
+void conn_free(struct conn_handle * conn);
 
 /*!
  * @brief Initializes the private data in a ::conn_handle
@@ -136,7 +135,7 @@ void conn_free(struct conn_handle *conn);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int conn_init(struct conn_handle *conn);
+int conn_init(struct conn_handle * conn);
 
 /*!
  * @brief Determine if the connection is currently in use
@@ -145,7 +144,7 @@ int conn_init(struct conn_handle *conn);
  *
  * @returns 1 if in use, 0 if idle
  */
-int conn_in_use(struct conn_handle *conn);
+int conn_in_use(struct conn_handle * conn);
 
 /*!
  * @brief Blocking call to listen for incoming connections from clients
@@ -154,7 +153,7 @@ int conn_in_use(struct conn_handle *conn);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int conn_listen(struct conn_handle *conn);
+int conn_listen(struct conn_handle * conn);
 
 /*!
  * @brief Copies data which has been transferred to the connection
@@ -165,7 +164,7 @@ int conn_listen(struct conn_handle *conn);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int conn_recv(struct conn_handle *conn, uint8_t *buff, size_t buff_len);
+int conn_recv(struct conn_handle * conn, uint8_t * buff, size_t buff_len);
 
 /*!
  * @brief Like ::conn_recv, but for any client and any amount of data
@@ -178,7 +177,8 @@ int conn_recv(struct conn_handle *conn, uint8_t *buff, size_t buff_len);
  *
  * @returns Number of bytes copied on success, negative ERRNO value on failure
  */
-int conn_recv_any(struct conn_handle *conn, uint8_t *buff, size_t buff_len, uint32_t *addr, uint16_t *port);
+int conn_recv_any(struct conn_handle * conn, uint8_t * buff, size_t buff_len,
+		  uint32_t * addr, uint16_t * port);
 
 /*!
  * @brief Send data to the connected client
@@ -189,7 +189,7 @@ int conn_recv_any(struct conn_handle *conn, uint8_t *buff, size_t buff_len, uint
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int conn_send(struct conn_handle *conn, const uint8_t *buff, size_t buff_len);
+int conn_send(struct conn_handle * conn, const uint8_t * buff, size_t buff_len);
 
 /*!
  * @brief Like ::conn_send, but to a specified, unconnected client
@@ -202,14 +202,15 @@ int conn_send(struct conn_handle *conn, const uint8_t *buff, size_t buff_len);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int conn_send_to(struct conn_handle *conn, const uint8_t *buff, size_t buff_len, uint32_t addr, uint16_t port);
+int conn_send_to(struct conn_handle * conn, const uint8_t * buff,
+		 size_t buff_len, uint32_t addr, uint16_t port);
 
 /*!
  * @brief Stops socket operations but does not close the socket
  *
  * @param[in,out] conn Target network connection instance
  */
-void conn_shutdown(struct conn_handle *conn);
+void conn_shutdown(struct conn_handle * conn);
 
 /*!
  * @brief Prints the remote address for the connection to the given ASCII string
@@ -217,6 +218,6 @@ void conn_shutdown(struct conn_handle *conn);
  * @param[in] conn Target network connection instance
  * @param[out] dest Destination ASCII string
  */
-void conn_get_remote_addr(const struct conn_handle *conn, char dest[46]);
+void conn_get_remote_addr(const struct conn_handle * conn, char dest[46]);
 
-#endif /* _conn_h */
+#endif /* CONN_H_ */
