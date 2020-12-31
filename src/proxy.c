@@ -99,55 +99,6 @@ struct proxy_priv {
 	char					port_str[6];
 };
 
-/*!
- * @brief Convert a port number to an ASCII string
- *
- * @param[in] port Port number to convert
- * @param[out] result Resulting ASCII string
- */
-static inline void port_to_str(uint16_t port, char result[6]);
-
-static inline void port_to_str(uint16_t port, char result[6])
-{
-	uint16_t port_tmp = port;
-	uint8_t n = 0;
-
-	do {
-		n++;
-		port_tmp /= 10;
-	} while (port_tmp != 0);
-
-	port_tmp = port;
-
-	switch (n) {
-	case 5:
-		*result = (char)(48 + port_tmp / 10000);
-		port_tmp %= 10000;
-		result++;
-		// fall through
-	case 4:
-		*result = (char)(48 + port_tmp / 1000);
-		port_tmp %= 1000;
-		result++;
-		// fall through
-	case 3:
-		*result = (char)(48 + port_tmp / 100);
-		port_tmp %= 100;
-		result++;
-		// fall through
-	case 2:
-		*result = (char)(48 + port_tmp / 10);
-		port_tmp %= 10;
-		result++;
-		// fall through
-	case 1:
-		*result = (char)(48 + port_tmp);
-		result++;
-	}
-
-	*result = '\0';
-}
-
 int proxy_authorize_callsign(struct proxy_handle * ph,
 			     const char * callsign)
 {
@@ -190,7 +141,7 @@ int proxy_load_conf(struct proxy_handle * ph, const char * path)
 	if (ret < 0)
 		return ret;
 
-	port_to_str(ph->conf.port, priv->port_str);
+	conn_port_to_str(ph->conf.port, priv->port_str);
 
 	if (ph->conf.bind_addr_ext_add != NULL) {
 		if (ph->conf.bind_addr_ext == NULL ||
@@ -554,7 +505,7 @@ int proxy_process(struct proxy_handle * ph)
 	struct conn_handle * conn = NULL;
 	int ret = -EBUSY;
 	int i;
-	char remote_addr[40] = { 0x0 };
+	char remote_addr[54] = { 0x0 };
 
 	conn = malloc(sizeof(struct conn_handle));
 	if (conn == NULL)
