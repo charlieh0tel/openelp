@@ -216,13 +216,14 @@ int proxy_init(struct proxy_handle * ph)
 	struct proxy_priv * priv;
 	int ret;
 
-	if (ph->priv == NULL)
+	if (ph->priv == NULL) {
 		ph->priv = malloc(sizeof(struct proxy_priv));
+		if (ph->priv == NULL)
+			return -ENOMEM;
 
-	if (ph->priv == NULL)
-		return -ENOMEM;
+		memset(ph->priv, 0x0, sizeof(struct proxy_priv));
+	}
 
-	memset(ph->priv, 0x0, sizeof(struct proxy_priv));
 	priv = (struct proxy_priv *)ph->priv;
 
 	// Initialize RNG
@@ -255,9 +256,6 @@ int proxy_init(struct proxy_handle * ph)
 	ret = mutex_init(&priv->usable_clients_mutex);
 	if (ret < 0)
 		goto proxy_init_exit;
-
-	priv->num_clients = 0;
-	priv->usable_clients = 0;
 
 	return 0;
 

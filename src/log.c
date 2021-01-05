@@ -48,6 +48,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #include "openelp/openelp.h"
@@ -138,11 +139,13 @@ int log_init(struct log_handle * log)
 {
 	struct log_priv * priv;
 
-	if (log->priv == NULL)
+	if (log->priv == NULL) {
 		log->priv = malloc(sizeof(struct log_priv));
+		if (log->priv == NULL)
+			return -ENOMEM;
 
-	if (log->priv == NULL)
-		return -ENOMEM;
+		memset(log->priv, 0x0, sizeof(struct log_priv));
+	}
 
 	priv = (struct log_priv *)log->priv;
 

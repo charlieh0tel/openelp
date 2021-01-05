@@ -79,13 +79,13 @@ int mutex_init(struct mutex_handle * mutex)
 	struct mutex_priv * priv;
 	int ret;
 
-	if (mutex->priv == NULL)
+	if (mutex->priv == NULL) {
 		mutex->priv = malloc(sizeof(struct mutex_priv));
+		if (mutex->priv == NULL)
+			return -ENOMEM;
 
-	if (mutex->priv == NULL)
-		return -ENOMEM;
-
-	memset(mutex->priv, 0x0, sizeof(struct mutex_priv));
+		memset(mutex->priv, 0x0, sizeof(struct mutex_priv));
+	}
 
 	priv = (struct mutex_priv *)mutex->priv;
 
@@ -205,13 +205,13 @@ int condvar_init(struct condvar_handle * condvar)
 	struct condvar_priv * priv;
 	int ret;
 
-	if (condvar->priv == NULL)
+	if (condvar->priv == NULL) {
 		condvar->priv = malloc(sizeof(struct condvar_priv));
+		if (condvar->priv == NULL)
+			return -ENOMEM;
 
-	if (condvar->priv == NULL)
-		return -ENOMEM;
-
-	memset(condvar->priv, 0x0, sizeof(struct condvar_priv));
+		memset(condvar->priv, 0x0, sizeof(struct condvar_priv));
+	}
 
 	priv = (struct condvar_priv *)condvar->priv;
 

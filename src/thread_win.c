@@ -104,13 +104,13 @@ int thread_init(struct thread_handle * pt)
 	struct thread_priv * priv;
 	int ret;
 
-	if (pt->priv == NULL)
+	if (pt->priv == NULL) {
 		pt->priv = malloc(sizeof(struct thread_priv));
+		if (pt->priv == NULL)
+			return -ENOMEM;
 
-	if (pt->priv == NULL)
-		return -ENOMEM;
-
-	memset(pt->priv, 0x0, sizeof(struct thread_priv));
+		memset(pt->priv, 0x0, sizeof(struct thread_priv));
+	}
 
 	priv = (struct thread_priv *)pt->priv;
 

@@ -212,13 +212,13 @@ int registration_service_init(struct registration_service_handle * rs)
 	struct registration_service_priv * priv;
 	int ret;
 
-	if (rs->priv == NULL)
+	if (rs->priv == NULL) {
 		rs->priv = malloc(sizeof(struct registration_service_priv));
+		if (rs->priv == NULL)
+			return -ENOMEM;
 
-	if (rs->priv == NULL)
-		return -ENOMEM;
-
-	memset(rs->priv, 0x0, sizeof(struct registration_service_priv));
+		memset(rs->priv, 0x0, sizeof(struct registration_service_priv));
+	}
 
 	priv = (struct registration_service_priv *)rs->priv;
 
@@ -230,13 +230,12 @@ int registration_service_init(struct registration_service_handle * rs)
 	if (ret != 0)
 		goto registration_service_init_exit;
 
-	ret = thread_init(&priv->thread);
-	if (ret != 0)
-		goto registration_service_init_exit;
-
 	priv->thread.func_ctx = rs;
 	priv->thread.func_ptr = registration_thread;
 	priv->thread.stack_size = 1024 * 1024;
+	ret = thread_init(&priv->thread);
+	if (ret != 0)
+		goto registration_service_init_exit;
 
 	return 0;
 
