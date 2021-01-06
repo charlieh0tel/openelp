@@ -217,6 +217,9 @@ else()
   add_compile_options(
     -Wall
     -Wextra
+    -Wunused-macros
+    -Wunreachable-code
+    -Wint-conversion
     )
   include(CheckCCompilerFlag)
   check_c_compiler_flag(-Wpedantic HAVE_W_PEDANTIC)
