@@ -130,10 +130,11 @@ thread_init_exit:
 int thread_join(struct thread_handle * pt)
 {
 	struct thread_priv * priv = (struct thread_priv *)pt->priv;
+	int ret;
 
 	mutex_lock(&priv->mutex);
 
-	WaitForSingleObject(priv->thread, INFINITE);
+	ret = WaitForSingleObject(priv->thread, INFINITE);
 
 	CloseHandle(priv->thread);
 
@@ -141,7 +142,10 @@ int thread_join(struct thread_handle * pt)
 
 	mutex_unlock(&priv->mutex);
 
-	return -ENOSYS;
+	if (ret != WAIT_OBJECT_0)
+		ret = GetLastError();
+
+	return ret;
 }
 
 int thread_start(struct thread_handle * pt)
