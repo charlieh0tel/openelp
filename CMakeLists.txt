@@ -26,14 +26,14 @@ if(WIN32)
     "Installation directory for all configuration files"
     )
 else()
-  set(SYSCONF_INSTALL_DIR "etc" CACHE PATH
+  set(SYSCONF_INSTALL_DIR "/etc" CACHE PATH
     "Installation directory for all configuration files"
     )
 endif()
 set(MAN_INSTALL_DIR "${SHARE_INSTALL_PREFIX}/man" CACHE PATH
   "Installation directory for all manuals"
   )
-set(SYSTEMD_SERVICES_INSTALL_DIR "lib/systemd/system" CACHE PATH
+set(SYSTEMD_SERVICES_INSTALL_DIR "/lib/systemd/system" CACHE PATH
   "Installation directory for systemd services"
   )
 
@@ -49,20 +49,6 @@ endif()
 set(OPENELP_EXTRA_VERSION "dev" CACHE STRING
   "Extra value suffixed to the version number"
   )
-
-if(IS_ABSOLUTE ${SYSCONF_INSTALL_DIR})
-  file(TO_CMAKE_PATH
-    "${SYSCONF_INSTALL_DIR}/ELProxy.conf"
-    OPENELP_CONFIG_HINT_DEFAULT)
-elseif(IS_ABSOLUTE ${BIN_INSTALL_DIR})
-  file(RELATIVE_PATH OPENELP_CONFIG_HINT_DEFAULT
-    "${BIN_INSTALL_DIR}"
-    "${CMAKE_PREFIX_PATH}/${SYSCONF_INSTALL_DIR}/ELProxy.conf")
-else()
-  file(RELATIVE_PATH OPENELP_CONFIG_HINT_DEFAULT
-    "${CMAKE_PREFIX_PATH}/${BIN_INSTALL_DIR}"
-    "${CMAKE_PREFIX_PATH}/${SYSCONF_INSTALL_DIR}/ELProxy.conf")
-endif()
 
 set(BUILD_SHARED_LIBS ON CACHE BOOL
   "Indicates that any libraries which are produced should be shared (.dll/.so)"
