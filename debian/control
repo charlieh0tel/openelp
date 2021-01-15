@@ -1,0 +1,13 @@
+Source: openelp
+Section: hamradio
+Priority: optional
+Maintainer: Christopher Hoover <ch@murgatroid.com>
+Build-Depends: debhelper (>= 10)
+Standards-Version: 4.1.2
+Homepage: https://github.com/charlieh0tel/openelp
+
+Package: openelp
+Architecture: any
+Depends: ${shlibs:Depends} ${misc:Depends}
+Description: Open Echolink Proxy
+ Open Echolink Proxy
