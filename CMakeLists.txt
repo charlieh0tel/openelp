@@ -148,6 +148,7 @@ endif()
 
 set(OPENELP_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(OPENELP_DOC_DIR "${OPENELP_DIR}/doc")
+set(OPENELP_ETC_DIR "${OPENELP_DIR}/etc")
 set(OPENELP_INCLUDE_DIR "${OPENELP_DIR}/include")
 set(OPENELP_PACKAGE_DIR "${OPENELP_DIR}/package")
 set(OPENELP_SOURCE_DIR "${OPENELP_DIR}/src")
@@ -244,7 +245,7 @@ link_directories(
 #
 
 add_subdirectory(${OPENELP_DOC_DIR})
-add_subdirectory(${OPENELP_INCLUDE_DIR})
+add_subdirectory(${OPENELP_ETC_DIR})
 add_subdirectory(${OPENELP_SOURCE_DIR})
 
 include(CTest)

@@ -93,32 +93,11 @@ endif()
 # Install
 #
 
-install(FILES "ELProxy.conf"
-  DESTINATION "${SYSCONF_INSTALL_DIR}"
-  COMPONENT config
-  )
-
 if(UNIX)
   install(FILES openelpd.1
     DESTINATION "${MAN_INSTALL_DIR}/man1"
     COMPONENT docs
     )
-
-  if(NOT APPLE)
-    get_filename_component(FULL_BIN_INSTALL_DIR
-      ${BIN_INSTALL_DIR} REALPATH BASE_DIR ${CMAKE_INSTALL_PREFIX})
-    get_filename_component(FULL_SYSCONF_INSTALL_DIR
-      ${SYSCONF_INSTALL_DIR} REALPATH BASE_DIR ${CMAKE_INSTALL_PREFIX})
-
-    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openelp.service.in"
-      "${CMAKE_CURRENT_BINARY_DIR}/openelp.service"
-      @ONLY)
-
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openelp.service"
-      DESTINATION "${SYSTEMD_SERVICES_INSTALL_DIR}"
-      COMPONENT systemd
-      )
-  endif()
 endif()
 
 if(OPENELP_DOC_HTMLHELP AND DOXYGEN_FOUND)

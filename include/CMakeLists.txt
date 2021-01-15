@@ -1,9 +1,0 @@
-#
-# Install
-#
-
-install(DIRECTORY ${OPENELP_INCLUDE_DIR}/openelp
-  DESTINATION "${INCLUDE_INSTALL_DIR}"
-  COMPONENT devel
-  FILES_MATCHING PATTERN "*.h"
-  )
