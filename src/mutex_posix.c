@@ -44,68 +44,58 @@
  * @brief Mutex implementation for POSIX machines
  */
 
-#include "mutex.h"
-
-#include <pthread.h>
-
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <pthread.h>
+
+#include "mutex.h"
+
 /*!
  * @brief Private data for an instance of a POSIX mutex
  */
-struct mutex_priv
-{
-	/// Condition variable used to implement the shared lock
-	pthread_cond_t cond;
+struct mutex_priv {
+	/*! Condition variable used to implement the shared lock */
+	pthread_cond_t	cond;
 
-	/// POSIX mutex used for exclusive locking
+	/*! POSIX mutex used for exclusive locking */
 	pthread_mutex_t lock;
 
-	/// Number of holders of the shared lock
-	unsigned int readers;
+	/*! Number of holders of the shared lock */
+	unsigned int	readers;
 };
 
 /*!
  * @brief Private data for an instance of a POSIX condition variable
  */
-struct condvar_priv
-{
-	/// POSIX condition variable
+struct condvar_priv {
+	/*! POSIX condition variable */
 	pthread_cond_t cond;
 };
 
 int mutex_init(struct mutex_handle *mutex)
 {
-	struct mutex_priv *priv;
+	struct mutex_priv *priv = mutex->priv;
 	int ret;
 
-	if (mutex->priv == NULL)
-	{
-		mutex->priv = malloc(sizeof(struct mutex_priv));
+	if (priv == NULL) {
+		priv = calloc(1, sizeof(*priv));
+		if (priv == NULL)
+			return -ENOMEM;
+
+		mutex->priv = priv;
 	}
-
-	if (mutex->priv == NULL)
-	{
-		return -ENOMEM;
-	}
-
-	memset(mutex->priv, 0x0, sizeof(struct mutex_priv));
-
-	priv = (struct mutex_priv *)mutex->priv;
 
 	ret = pthread_mutex_init(&priv->lock, NULL);
-	if (ret != 0)
-	{
+	if (ret != 0) {
 		ret = -ret;
 
 		goto mutex_init_exit;
 	}
 
 	ret = pthread_cond_init(&priv->cond, NULL);
-	if (ret != 0)
-	{
+	if (ret != 0) {
 		ret = -ret;
 
 		goto mutex_init_exit_late;
@@ -125,20 +115,16 @@ mutex_init_exit:
 
 int mutex_lock(struct mutex_handle *mutex)
 {
-	struct mutex_priv *priv = (struct mutex_priv *)mutex->priv;
+	struct mutex_priv *priv = mutex->priv;
 	int ret;
 
 	ret = pthread_mutex_lock(&priv->lock);
 	if (ret != 0)
-	{
 		return -ret;
-	}
 
-	while (priv->readers > 0)
-	{
+	while (priv->readers > 0) {
 		ret = pthread_cond_wait(&priv->cond, &priv->lock);
-		if (ret != 0)
-		{
+		if (ret != 0) {
 			ret = -ret;
 			goto mutex_lock_exit;
 		}
@@ -154,14 +140,12 @@ mutex_lock_exit:
 
 int mutex_lock_shared(struct mutex_handle *mutex)
 {
-	struct mutex_priv *priv = (struct mutex_priv *)mutex->priv;
+	struct mutex_priv *priv = mutex->priv;
 	int ret;
 
 	ret = pthread_mutex_lock(&priv->lock);
 	if (ret != 0)
-	{
 		return -ret;
-	}
 
 	priv->readers++;
 
@@ -170,27 +154,23 @@ int mutex_lock_shared(struct mutex_handle *mutex)
 
 int mutex_unlock(struct mutex_handle *mutex)
 {
-	struct mutex_priv *priv = (struct mutex_priv *)mutex->priv;
+	struct mutex_priv *priv = mutex->priv;
 
 	return pthread_mutex_unlock(&priv->lock);
 }
 
 int mutex_unlock_shared(struct mutex_handle *mutex)
 {
-	struct mutex_priv *priv = (struct mutex_priv *)mutex->priv;
+	struct mutex_priv *priv = mutex->priv;
 	int ret;
 
 	ret = pthread_mutex_lock(&priv->lock);
 	if (ret != 0)
-	{
 		return -ret;
-	}
 
-	if (--(priv->readers) <= 0)
-	{
+	if (--(priv->readers) <= 0) {
 		ret = pthread_cond_broadcast(&priv->cond);
-		if (ret != 0)
-		{
+		if (ret != 0) {
 			ret = -ret;
 			goto mutex_unlock_shared_exit;
 		}
@@ -206,9 +186,8 @@ mutex_unlock_shared_exit:
 
 void mutex_free(struct mutex_handle *mutex)
 {
-	if (mutex->priv != NULL)
-	{
-		struct mutex_priv *priv = (struct mutex_priv *)mutex->priv;
+	if (mutex->priv != NULL) {
+		struct mutex_priv *priv = mutex->priv;
 
 		pthread_mutex_destroy(&priv->lock);
 
@@ -221,26 +200,19 @@ void mutex_free(struct mutex_handle *mutex)
 
 int condvar_init(struct condvar_handle *condvar)
 {
-	struct condvar_priv *priv;
+	struct condvar_priv *priv = condvar->priv;
 	int ret;
 
-	if (condvar->priv == NULL)
-	{
-		condvar->priv = malloc(sizeof(struct condvar_priv));
+	if (priv == NULL) {
+		priv = calloc(1, sizeof(*priv));
+		if (priv == NULL)
+			return -ENOMEM;
+
+		condvar->priv = priv;
 	}
-
-	if (condvar->priv == NULL)
-	{
-		return -ENOMEM;
-	}
-
-	memset(condvar->priv, 0x0, sizeof(struct condvar_priv));
-
-	priv = (struct condvar_priv *)condvar->priv;
 
 	ret = pthread_cond_init(&priv->cond, NULL);
-	if (ret != 0)
-	{
+	if (ret != 0) {
 		ret = -ret;
 
 		goto condvar_init_exit;
@@ -257,16 +229,17 @@ condvar_init_exit:
 
 int condvar_wait(struct condvar_handle *condvar, struct mutex_handle *mutex)
 {
-	struct condvar_priv *priv = (struct condvar_priv *)condvar->priv;
-	struct mutex_priv *mpriv = (struct mutex_priv *)mutex->priv;
+	struct condvar_priv *priv = condvar->priv;
+	struct mutex_priv *mpriv = mutex->priv;
 
 	return -pthread_cond_wait(&priv->cond, &mpriv->lock);
 }
 
-int condvar_wait_time(struct condvar_handle *condvar, struct mutex_handle *mutex, uint32_t msec)
+int condvar_wait_time(struct condvar_handle *condvar,
+		      struct mutex_handle *mutex, uint32_t msec)
 {
-	struct condvar_priv *priv = (struct condvar_priv *)condvar->priv;
-	struct mutex_priv *mpriv = (struct mutex_priv *)mutex->priv;
+	struct condvar_priv *priv = condvar->priv;
+	struct mutex_priv *mpriv = mutex->priv;
 	struct timespec abstime;
 	int ret;
 
@@ -281,23 +254,22 @@ int condvar_wait_time(struct condvar_handle *condvar, struct mutex_handle *mutex
 
 int condvar_wake_one(struct condvar_handle *condvar)
 {
-	struct condvar_priv *priv = (struct condvar_priv *)condvar->priv;
+	struct condvar_priv *priv = condvar->priv;
 
 	return -pthread_cond_signal(&priv->cond);
 }
 
 int condvar_wake_all(struct condvar_handle *condvar)
 {
-	struct condvar_priv *priv = (struct condvar_priv *)condvar->priv;
+	struct condvar_priv *priv = condvar->priv;
 
 	return -pthread_cond_broadcast(&priv->cond);
 }
 
 void condvar_free(struct condvar_handle *condvar)
 {
-	if (condvar->priv != NULL)
-	{
-		struct condvar_priv *priv = (struct condvar_priv *)condvar->priv;
+	if (condvar->priv != NULL) {
+		struct condvar_priv *priv = condvar->priv;
 
 		pthread_cond_destroy(&priv->cond);
 
@@ -305,4 +277,3 @@ void condvar_free(struct condvar_handle *condvar)
 		condvar->priv = NULL;
 	}
 }
-

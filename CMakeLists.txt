@@ -141,8 +141,8 @@ set(OPENELP_SOURCE_DIR "${OPENELP_DIR}/src")
 set(OPENELP_TEST_DIR "${OPENELP_DIR}/test")
 
 set(OPENELP_MAJOR_VERSION 0)
-set(OPENELP_MINOR_VERSION 8)
-set(OPENELP_PATCH_VERSION 1)
+set(OPENELP_MINOR_VERSION 9)
+set(OPENELP_PATCH_VERSION 3)
 set(OPENELP_VERSION
   ${OPENELP_MAJOR_VERSION}.${OPENELP_MINOR_VERSION}.${OPENELP_PATCH_VERSION})
 if(OPENELP_EXTRA_VERSION)
@@ -159,6 +159,12 @@ add_compile_options(
   -DOPENELP_PATCH_VERSION=${OPENELP_PATCH_VERSION}
   -DOPENELP_VERSION=${OPENELP_VERSION}
   )
+
+if(OPENELP_EXTRA_VERSION)
+  add_compile_options(
+    -DOPENELP_EXTRA_VERSION=${OPENELP_EXTRA_VERSION}
+    )
+endif()
 
 if(OPENELP_CONFIG_HINT)
   add_compile_options(
@@ -204,17 +210,23 @@ else()
   add_compile_options(
     -Wall
     -Wextra
+    -Wunused-macros
+    -Wunreachable-code
     )
   include(CheckCCompilerFlag)
   check_c_compiler_flag(-Wpedantic HAVE_W_PEDANTIC)
   if(HAVE_W_PEDANTIC)
     add_compile_options(-Wpedantic)
   endif()
+  check_c_compiler_flag(-Wint-conversion HAVE_W_INT_CONVERSION)
+  if(HAVE_W_INT_CONVERSION)
+    add_compile_options(-Wint-conversion)
+  endif()
 endif()
 
-# Default to C11
+# Default to C90
 if(NOT CMAKE_C_STANDARD)
-  set(CMAKE_C_STANDARD 11)
+  set(CMAKE_C_STANDARD 90)
 endif()
 
 #

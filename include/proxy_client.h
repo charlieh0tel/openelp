@@ -1,5 +1,5 @@
 /*!
- * @file test_digest.c
+ * @file proxy_client.h
  *
  * @copyright
  * Copyright &copy; 2020, Scott K Logan
@@ -41,63 +41,69 @@
  *
  * @author Scott K Logan &lt;logans@cottsay.net&gt;
  *
- * @brief Tests related to digest utilities
+ * @brief Internal API for a client connection
  */
 
-#include <errno.h>
-#include <stdio.h>
-#include <string.h>
+#ifndef PROXY_CLIENT_H_
+#define PROXY_CLIENT_H_
 
-#include "digest.h"
+#include <stdint.h>
 
 /*!
- * @brief Test of the round-trip digest conversion routines
+ * @brief Represents an instance of a client connection
+ *
+ * This struct should be initialized to zero before being used. The private
+ * data should be initialized using the ::proxy_client_init function, and
+ * subsequently freed by ::proxy_client_free when the worker is no longer
+ * needed.
+ */
+struct proxy_client_handle {
+	/*! Private data - used internally by proxy_client functions */
+	void *priv;
+
+	/*! Hostname or address of the proxy server */
+	char *host_addr;
+
+	/*! Port number of the proxy server */
+	char *host_port;
+
+	/*! The callsign to use during proxy authorization */
+	char *callsign;
+
+	/*! The password to use during proxy authorization */
+	char *password;
+};
+
+/*!
+ * @brief Connect to the proxy server
+ *
+ * @param[in,out] ch Target client connection instance
  *
  * @returns 0 on success, negative ERRNO value on failure
- *
- * @test Test of the round-trip digest conversion routines
  */
-static int test_digest_conversion(void);
+int proxy_client_connect(struct proxy_client_handle *ch);
 
 /*!
- * @brief Main entry point for digest tests
+ * @brief Disconnect from the proxy server
  *
- * @returns 0 on success, non-zero value on failure
+ * @param[in,out] ch Target client connection instance
  */
-int main(void);
+void proxy_client_disconnect(struct proxy_client_handle *ch);
 
-int main(void)
-{
-	int ret = 0;
+/*!
+ * @brief Frees data allocated by ::proxy_client_init
+ *
+ * @param[in,out] ch Target client connection instance
+ */
+void proxy_client_free(struct proxy_client_handle *ch);
 
-	ret |= test_digest_conversion();
+/*!
+ * @brief Initializes the private data in a ::proxy_client_handle
+ *
+ * @param[in,out] ch Target client connection instance
+ *
+ * @returns 0 on success, negative ERRNO value on failure
+ */
+int proxy_client_init(struct proxy_client_handle *ch);
 
-	return ret;
-}
-
-static int test_digest_conversion(void)
-{
-	const uint32_t nonce = 0x4d3b6d47;
-	static const char expected_response[9] = "4d3b6d47";
-	char response[9] = { 0x00 };
-	uint32_t round_trip;
-	int ret = 0;
-
-	digest_to_hex32(nonce, response);
-	if (strcmp(expected_response, response) != 0) {
-		fprintf(stderr,
-			"Error: Conversion to hex32 failed. Expected: '%s'. Got: '%s'.\n",
-			expected_response, response);
-		ret |= -EINVAL;
-	}
-
-	round_trip = hex32_to_digest(expected_response);
-	if (nonce != round_trip) {
-		fprintf(stderr,
-			"Error: Conversion from hex32 failed. Expected: 0x%08X. Got: 0x%08X.\n",
-			nonce, round_trip);
-		ret |= -EINVAL;
-	}
-
-	return ret;
-}
+#endif /* PROXY_CLIENT_H_ */

@@ -7,7 +7,8 @@ if(UNIX)
     ${OPENELP_SOURCE_DIR}/mutex_posix.c
     ${OPENELP_SOURCE_DIR}/thread_posix.c
     )
-  set(OPENELP_ICON_RESOURCE "")
+  set(OPENELP_ICON_RESOURCE)
+  set(OPENELP_VERSION_RESOURCE)
 elseif(WIN32)
   set(OPENELP_PLATFORM_FILES
     ${CMAKE_CURRENT_BINARY_DIR}/eventlog/log_eventlog_messages.rc
@@ -17,6 +18,9 @@ elseif(WIN32)
     )
   set(OPENELP_ICON_RESOURCE
     "${CMAKE_CURRENT_BINARY_DIR}/eventlog/icon.rc"
+    )
+  set(OPENELP_VERSION_RESOURCE
+    "${OPENELP_SOURCE_DIR}/version.rc"
     )
 else()
   message(ERROR "Unsupported platform")
@@ -37,11 +41,14 @@ add_library(openelp_objects OBJECT
   ${OPENELP_SOURCE_DIR}/conn.c
   ${OPENELP_SOURCE_DIR}/digest.c
   ${OPENELP_SOURCE_DIR}/log.c
+  ${OPENELP_SOURCE_DIR}/pearson.c
   ${OPENELP_SOURCE_DIR}/proxy.c
+  ${OPENELP_SOURCE_DIR}/proxy_client.c
   ${OPENELP_SOURCE_DIR}/proxy_conn.c
   ${OPENELP_SOURCE_DIR}/rand.c
   ${OPENELP_SOURCE_DIR}/regex.c
   ${OPENELP_SOURCE_DIR}/registration.c
+  ${OPENELP_SOURCE_DIR}/worker.c
   ${OPENELP_MD5_FILES}
   ${OPENELP_PLATFORM_FILES}
   )
@@ -71,14 +78,19 @@ if(NOT WIN32 AND BUILD_SHARED_LIBS)
   target_compile_options(openelp_objects PRIVATE -fPIC)
 endif()
 
-add_library(openelp $<TARGET_OBJECTS:openelp_objects>)
+add_library(openelp
+  $<TARGET_OBJECTS:openelp_objects>
+  ${OPENELP_VERSION_RESOURCE})
 
 add_executable(openelpd
   "${OPENELP_SOURCE_DIR}/proxyd.c"
-  "${OPENELP_ICON_RESOURCE}")
+  ${OPENELP_ICON_RESOURCE}
+  ${OPENELP_VERSION_RESOURCE})
 
 if(WIN32)
-  add_executable(openelp_service ${OPENELP_SOURCE_DIR}/service.c)
+  add_executable(openelp_service
+    ${OPENELP_SOURCE_DIR}/service.c
+    ${OPENELP_VERSION_RESOURCE})
 endif()
 
 #
@@ -136,6 +148,11 @@ set_target_properties(openelp PROPERTIES
 if(WIN32)
   target_compile_options(openelp_objects PRIVATE
     "-DOPENELP_API=__declspec(dllexport)"
+    )
+else()
+  target_compile_options(openelp_objects PRIVATE
+    "-DOPENELP_API=__attribute__((__visibility__(\"default\")))"
+    "-fvisibility=hidden"
     )
 endif()
 

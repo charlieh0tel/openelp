@@ -73,10 +73,94 @@ jobs:
       - name: Test project
         run: cmake --build ${{runner.workspace}}/build --config ${{matrix.build_type}} -j2 -t ${{matrix.test_target}}
         if: ${{matrix.test_target}}
+        env:
+          CTEST_OUTPUT_ON_FAILURE: 1
       - name: Package project
         run: cmake --build ${{runner.workspace}}/build --config ${{matrix.build_type}} -j2 -t package
       - name: Upload package
-        uses: actions/upload-artifact@v2-preview
+        uses: actions/upload-artifact@v2
         with:
           name: OpenELP-${{runner.os}}
           path: ${{runner.workspace}}/build/_CPack_Packages/${{runner.os}}/ZIP/OpenELP-${{runner.os}}/*
+
+  build_documentation:
+    name: Build Documentation
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Install Prerequisites
+        run: sudo apt-get install libclang-cpp9 libclang1-9 -y
+      - name: Cache Doxygen
+        id: cache-doxygen
+        uses: actions/cache@v2
+        with:
+          path: ${{runner.workspace}}/doxygen
+          key: doxygen-1.9.1
+      - name: Download Doxygen
+        if: steps.cache-doxygen.outputs.cache-hit != 'true'
+        working-directory: ${{runner.workspace}}
+        run: |
+          wget -O - https://doxygen.nl/files/doxygen-1.9.1.linux.bin.tar.gz | tar -xz
+          mv doxygen-1.9.1 doxygen
+      - name: Clone project
+        uses: actions/checkout@v2
+      - name: Create build environment
+        shell: bash
+        working-directory: ${{runner.workspace}}
+        run: mkdir -p build && echo "WARN_AS_ERROR = FAIL_ON_WARNINGS" >> ${{github.workspace}}/doc/Doxyfile.in
+      - name: Configure project
+        working-directory: ${{runner.workspace}}/build
+        run: >
+          cmake ${{github.workspace}}
+          -Werror=dev
+          -Werror=deprecated
+          -DCMAKE_PROGRAM_PATH:PATH="${{runner.workspace}}/doxygen/bin"
+          -DBUILD_TESTING:BOOL=OFF
+          -DBUILD_SHARED_LIBS:BOOL=OFF
+          -DOPENELP_DOC_HTMLHELP:BOOL=OFF
+          -DOPENELP_BUNDLE_PCRE:BOOL=OFF
+          -DOPENELP_USE_OPENSSL:BOOL=OFF
+          -DOPENELP_EXTRA_VERSION=${{steps.get-snap-id.outputs.snap_id}}
+          -DOPENELP_DOC_INTERNAL=ON
+      - name: Build documentation
+        run: cmake --build ${{runner.workspace}}/build -j2 -t doc
+      - name: Upload documentation
+        uses: actions/upload-artifact@v2
+        with:
+          name: OpenELP-HTML-Docs
+          path: ${{runner.workspace}}/build/doc/html/*
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v2
+      - name: Create build environment
+        shell: bash
+        working-directory: ${{runner.workspace}}
+        run: mkdir -p build
+      - name: Configure project
+        working-directory: ${{runner.workspace}}/build
+        run: >
+          cmake ${{github.workspace}}
+          -Wno-dev
+          -DCMAKE_BUILD_TYPE=Debug
+          -DBUILD_TESTING:BOOL=ON
+          -DBUILD_SHARED_LIBS:BOOL=ON
+          -DOPENELP_BUNDLE_PCRE:BOOL=OFF
+          -DOPENELP_USE_OPENSSL:BOOL=OFF
+          -DCMAKE_C_FLAGS="--coverage"
+      - name: Build project
+        run: cmake --build ${{runner.workspace}}/build --config Debug -j2
+      - name: Test project
+        run: cmake --build ${{runner.workspace}}/build --config Debug -j2 -t test
+        env:
+          CTEST_OUTPUT_ON_FAILURE: 1
+      - name: Upload coverage
+        uses: codecov/codecov-action@v1
+        with:
+          directory: ${{github.workspace}}
+          gcov_args: -s ${{github.workspace}}
+          gcov_path_exclude: '*/CompilerIdC/*'
+          gcov_root_dir: ${{runner.workspace}}/build
+          working-directory: ${{github.workspace}}

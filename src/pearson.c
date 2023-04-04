@@ -1,5 +1,5 @@
 /*!
- * @file test_digest.c
+ * @file pearson.c
  *
  * @copyright
  * Copyright &copy; 2020, Scott K Logan
@@ -41,63 +41,62 @@
  *
  * @author Scott K Logan &lt;logans@cottsay.net&gt;
  *
- * @brief Tests related to digest utilities
+ * @brief Implmentation of a Pearson hashing function
  */
 
-#include <errno.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "digest.h"
+#include "pearson.h"
 
 /*!
- * @brief Test of the round-trip digest conversion routines
+ * @brief Hash computation permutation table
  *
- * @returns 0 on success, negative ERRNO value on failure
- *
- * @test Test of the round-trip digest conversion routines
+ * Chosen by fair dice roll.
+ * Guaranteed to be random.
  */
-static int test_digest_conversion(void);
+static const uint8_t permutation_table[256] = {
+	5,   42,  6,   37,  103, 84,  75,  83,
+	219, 54,  116, 223, 192, 239, 163, 154,
+	114, 189, 206, 105, 92,  76,  162, 225,
+	158, 125, 74,  234, 160, 29,  153, 198,
+	132, 34,  93,  86,  161, 159, 181, 66,
+	197, 82,  204, 59,  237, 134, 36,  57,
+	95,  39,  90,  32,  150, 217, 30,  202,
+	174, 89,  38,  216, 117, 52,  169, 232,
+	43,  254, 126, 222, 170, 129, 49,  207,
+	73,  138, 120, 25,  27,  190, 100, 229,
+	172, 67,  199, 210, 214, 218, 62,  18,
+	97,  63,  101, 7,   20,  187, 131, 179,
+	188, 247, 135, 68,  195, 71,  85,  144,
+	107, 241, 182, 231, 98,  60,  245, 91,
+	119, 87,  12,  51,  146, 96,  47,  45,
+	22,  40,  1,   205, 88,  215, 141, 108,
+	139, 23,  133, 78,  61,  21,  72,  226,
+	183, 53,  106, 173, 224, 31,  44,  80,
+	104, 167, 145, 81,  46,  10,  244, 193,
+	246, 55,  112, 19,  58,  176, 221, 255,
+	209, 196, 147, 14,  127, 79,  111, 157,
+	249, 26,  177, 168, 212, 69,  13,  115,
+	238, 227, 180, 33,  230, 109, 228, 121,
+	142, 156, 28,  64,  110, 118, 165, 184,
+	3,   149, 128, 203, 220, 186, 50,  213,
+	171, 201, 164, 242, 191, 11,  152, 178,
+	252, 194, 123, 48,  2,   130, 24,  124,
+	113, 248, 251, 137, 253, 208, 99,  136,
+	166, 0,   65,  4,   185, 15,  250, 235,
+	16,  9,   200, 211, 35,  175, 70,  155,
+	243, 240, 143, 122, 236, 233, 8,   148,
+	102, 56,  77,  41,  94,  140, 17,  151,
+};
 
-/*!
- * @brief Main entry point for digest tests
- *
- * @returns 0 on success, non-zero value on failure
- */
-int main(void);
-
-int main(void)
+uint8_t pearson_get(const uint8_t *data, size_t data_len)
 {
-	int ret = 0;
+	uint8_t ret = data_len % 256;
 
-	ret |= test_digest_conversion();
+	if (data_len == 0)
+		return 0;
 
-	return ret;
-}
-
-static int test_digest_conversion(void)
-{
-	const uint32_t nonce = 0x4d3b6d47;
-	static const char expected_response[9] = "4d3b6d47";
-	char response[9] = { 0x00 };
-	uint32_t round_trip;
-	int ret = 0;
-
-	digest_to_hex32(nonce, response);
-	if (strcmp(expected_response, response) != 0) {
-		fprintf(stderr,
-			"Error: Conversion to hex32 failed. Expected: '%s'. Got: '%s'.\n",
-			expected_response, response);
-		ret |= -EINVAL;
-	}
-
-	round_trip = hex32_to_digest(expected_response);
-	if (nonce != round_trip) {
-		fprintf(stderr,
-			"Error: Conversion from hex32 failed. Expected: 0x%08X. Got: 0x%08X.\n",
-			nonce, round_trip);
-		ret |= -EINVAL;
-	}
+	do {
+		ret = permutation_table[ret ^ *data++];
+	} while (--data_len > 0);
 
 	return ret;
 }

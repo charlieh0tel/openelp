@@ -44,8 +44,8 @@
  * @brief Internal API for network connections
  */
 
-#ifndef _conn_h
-#define _conn_h
+#ifndef CONN_H_
+#define CONN_H_
 
 #include <stdint.h>
 
@@ -56,13 +56,12 @@
 /*!
  * @brief Supported connection protocols
  */
-enum CONN_TYPE
-{
-	/// Transmission Control Protocol
+enum CONN_TYPE {
+	/*! Transmission Control Protocol */
 	CONN_TYPE_TCP,
 
-	/// User Datagram Protocol
-	CONN_TYPE_UDP,
+	/*! User Datagram Protocol */
+	CONN_TYPE_UDP
 };
 
 /*!
@@ -72,18 +71,17 @@ enum CONN_TYPE
  * should be initialized using the ::conn_init function, and subsequently
  * freed by ::conn_free when the network connection is no longer needed.
  */
-struct conn_handle
-{
-	/// Private data - used internally by conn functions
+struct conn_handle {
+	/*! Private data - used internally by conn functions */
 	void *priv;
 
-	/// Local network interface to bind to, or NULL for all
+	/*! Local network interface to bind to, or NULL for all */
 	const char *source_addr;
 
-	/// Local socket port to bind to, or NULL for any
+	/*! Local socket port to bind to, or NULL for any */
 	const char *source_port;
 
-	/// Protocol to use for this connection
+	/*! Protocol to use for this connection */
 	enum CONN_TYPE type;
 };
 
@@ -157,6 +155,14 @@ int conn_in_use(struct conn_handle *conn);
 int conn_listen(struct conn_handle *conn);
 
 /*!
+ * @brief Convert a port number to an ASCII string
+ *
+ * @param[in] port The port number to convert
+ * @param[out] result Resulting ASCII string
+ */
+void conn_port_to_str(uint16_t port, char result[6]);
+
+/*!
  * @brief Copies data which has been transferred to the connection
  *
  * @param[in] conn Target network connection instance
@@ -178,7 +184,8 @@ int conn_recv(struct conn_handle *conn, uint8_t *buff, size_t buff_len);
  *
  * @returns Number of bytes copied on success, negative ERRNO value on failure
  */
-int conn_recv_any(struct conn_handle *conn, uint8_t *buff, size_t buff_len, uint32_t *addr, uint16_t *port);
+int conn_recv_any(struct conn_handle *conn, uint8_t *buff, size_t buff_len,
+		  uint32_t *addr, uint16_t *port);
 
 /*!
  * @brief Send data to the connected client
@@ -202,7 +209,22 @@ int conn_send(struct conn_handle *conn, const uint8_t *buff, size_t buff_len);
  *
  * @returns 0 on success, negative ERRNO value on failure
  */
-int conn_send_to(struct conn_handle *conn, const uint8_t *buff, size_t buff_len, uint32_t addr, uint16_t port);
+int conn_send_to(struct conn_handle *conn, const uint8_t *buff,
+		 size_t buff_len, uint32_t addr, uint16_t port);
+
+/*!
+ * @brief Set the receive timeout for a connection
+ *
+ * @param[in] conn Target network connection instance
+ * @param[in,out] msec Duration to wait before returning from ::conn_recv
+ *
+ * @returns 0 on success, negative ERRNO value on failure
+ *
+ * Note that due to platform-specific behaviors, the connection should be
+ * closed when a timeout occurs. Setting the timeout to 0 disables the
+ * timeout, which is the default behavior when a connection is created.
+ */
+int conn_set_timeout(struct conn_handle *conn, uint32_t msec);
 
 /*!
  * @brief Stops socket operations but does not close the socket
@@ -217,6 +239,6 @@ void conn_shutdown(struct conn_handle *conn);
  * @param[in] conn Target network connection instance
  * @param[out] dest Destination ASCII string
  */
-void conn_get_remote_addr(const struct conn_handle *conn, char dest[46]);
+void conn_get_remote_addr(const struct conn_handle *conn, char dest[54]);
 
-#endif /* _conn_h */
+#endif /* CONN_H_ */

@@ -1,5 +1,5 @@
 /*!
- * @file test_digest.c
+ * @file pearson.h
  *
  * @copyright
  * Copyright &copy; 2020, Scott K Logan
@@ -41,63 +41,23 @@
  *
  * @author Scott K Logan &lt;logans@cottsay.net&gt;
  *
- * @brief Tests related to digest utilities
+ * @brief Internal API for random number generation
  */
 
-#include <errno.h>
-#include <stdio.h>
-#include <string.h>
+#ifndef PEARSON_H_
+#define PEARSON_H_
 
-#include "digest.h"
+#include <stdint.h>
+#include <stddef.h>
 
 /*!
- * @brief Test of the round-trip digest conversion routines
+ * @brief Computes the 8-bit Pearson hash of some data
  *
- * @returns 0 on success, negative ERRNO value on failure
+ * @param[in] data Buffer containing data to be hashed
+ * @param[in] data_len Number of bytes in data
  *
- * @test Test of the round-trip digest conversion routines
+ * @returns 8-bit Pearson hash of the data
  */
-static int test_digest_conversion(void);
+uint8_t pearson_get(const uint8_t *data, size_t data_len);
 
-/*!
- * @brief Main entry point for digest tests
- *
- * @returns 0 on success, non-zero value on failure
- */
-int main(void);
-
-int main(void)
-{
-	int ret = 0;
-
-	ret |= test_digest_conversion();
-
-	return ret;
-}
-
-static int test_digest_conversion(void)
-{
-	const uint32_t nonce = 0x4d3b6d47;
-	static const char expected_response[9] = "4d3b6d47";
-	char response[9] = { 0x00 };
-	uint32_t round_trip;
-	int ret = 0;
-
-	digest_to_hex32(nonce, response);
-	if (strcmp(expected_response, response) != 0) {
-		fprintf(stderr,
-			"Error: Conversion to hex32 failed. Expected: '%s'. Got: '%s'.\n",
-			expected_response, response);
-		ret |= -EINVAL;
-	}
-
-	round_trip = hex32_to_digest(expected_response);
-	if (nonce != round_trip) {
-		fprintf(stderr,
-			"Error: Conversion from hex32 failed. Expected: 0x%08X. Got: 0x%08X.\n",
-			nonce, round_trip);
-		ret |= -EINVAL;
-	}
-
-	return ret;
-}
+#endif /* PEARSON_H_ */
